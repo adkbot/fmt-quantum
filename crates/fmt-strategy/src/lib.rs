@@ -40,7 +40,7 @@ impl Candle {
             return Err(StrategyError::InvalidCandle("inconsistent OHLC values"));
         }
         let local = self.open_time.with_timezone(&New_York);
-        if local.minute() % MINUTES_PER_CANDLE != 0 || local.second() != 0 {
+        if local.minute() % MINUTES_PER_CANDLE != 0 || local.second() != 0 || local.nanosecond() != 0 {
             return Err(StrategyError::InvalidCandle(
                 "timestamp is not aligned to a 15-minute candle",
             ));
