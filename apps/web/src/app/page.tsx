@@ -5,6 +5,7 @@ import { AuthPanel } from "@/components/auth-panel";
 import { RiskConfigPanel } from "@/components/risk-config-panel";
 import { WalletVerificationPanel } from "@/components/wallet-verification-panel";
 import { GmxAccountPanel } from "@/components/gmx-account-panel";
+import { StrategyControlPanel } from "@/components/strategy-control-panel";
 import { arbitrum } from "wagmi/chains";
 
 function shortAddress(address?: string) {
@@ -102,6 +103,7 @@ export default function HomePage() {
             <div><span>VWAP</span><b>HLC3 × Volume</b></div>
             <div><span>Confirmação</span><b>Fechamento do candle</b></div>
           </div>
+          <StrategyControlPanel />
         </article>
 
         <article className="panel wallet-panel">
