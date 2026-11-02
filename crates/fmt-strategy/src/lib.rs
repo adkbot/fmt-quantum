@@ -312,4 +312,49 @@ mod tests {
         assert_eq!(local.hour(), 20);
         assert_eq!(local.minute(), 0);
     }
+
+    fn local_candle(hour: u32, minute: u32, high: f64, low: f64, close: f64) -> Candle {
+        let utc = New_York
+            .with_ymd_and_hms(2026, 1, 12, hour, minute, 0)
+            .unwrap()
+            .with_timezone(&Utc);
+        Candle { open_time: utc, open: 100.0, high, low, close, volume: 10.0 }
+    }
+
+    #[test]
+    fn requires_all_eight_contiguous_pre_session_bars() {
+        let mut engine = FmtEngine::new();
+        for index in 0..8 {
+            let total_minutes = index * 15;
+            let hour = 18 + total_minutes / 60;
+            let minute = total_minutes % 60;
+            let bar = local_candle(hour, minute, 101.0, 99.0, 100.0);
+            engine.on_candle(bar).unwrap();
+        }
+        assert_eq!(engine.pre_session_bars, 8);
+        assert!(engine.pre_session_complete);
+    }
+
+    #[test]
+    fn first_tokyo_signal_uses_previous_pre_session_close() {
+        let mut engine = FmtEngine::new();
+        for index in 0..8 {
+            let total_minutes = index * 15;
+            let hour = 18 + total_minutes / 60;
+            let minute = total_minutes % 60;
+            let bar = if index == 7 {
+                local_candle(hour, minute, 101.0, 98.0, 99.0)
+            } else {
+                local_candle(hour, minute, 101.0, 99.0, 100.0)
+            };
+            engine.on_candle(bar).unwrap();
+        }
+
+        let tokyo_open = local_candle(20, 0, 102.0, 98.0, 101.0);
+        let events = engine.on_candle(tokyo_open).unwrap();
+        assert!(events.iter().any(|event| matches!(
+            event,
+            StrategyEvent::Enter { side: Side::Buy, .. }
+        )));
+    }
 }
