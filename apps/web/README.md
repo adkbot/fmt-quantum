@@ -12,6 +12,7 @@ Initial Next.js dashboard shell for FMT QUANTUM.
 - Per-user risk configuration editor backed by `/v1/risk-config`.
 - Per-user FMT monitoring activation backed by `/v1/strategy`; activation requires saved risk limits.
 - On-demand read-only GMX account snapshot for verified Arbitrum wallets.
+- User-scoped FMT signal history and Supabase Realtime inserts.
 - Arbitrum One network detection and switch action.
 - Clear development/offline indicators.
 - No trade, approval, deposit, withdrawal, or delegated-key controls.
