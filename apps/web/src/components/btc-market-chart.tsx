@@ -63,6 +63,7 @@ export function BtcMarketChart() {
       return;
     }
 
+    const client = supabase;
     const chart = createChart(container, {
       width: container.clientWidth,
       height: 340,
@@ -79,11 +80,11 @@ export function BtcMarketChart() {
         borderColor: "#263541",
         timeVisible: true,
         secondsVisible: false,
-        tickMarkFormatter: (time) => newYorkTime(time)
+        tickMarkFormatter: (time: Time) => newYorkTime(time)
       },
       localization: {
         locale: "en-US",
-        timeFormatter: (time) => newYorkTime(time)
+        timeFormatter: (time: Time) => newYorkTime(time)
       },
       crosshair: { mode: 1 }
     });
@@ -100,7 +101,7 @@ export function BtcMarketChart() {
     let loaded = false;
     const pending: CandleRow[] = [];
 
-    const channel = supabase
+    const channel = client
       .channel("bybit-btcusdt-m15-market-candles")
       .on(
         "postgres_changes",
@@ -140,7 +141,7 @@ export function BtcMarketChart() {
     observer.observe(container);
 
     async function loadHistory() {
-      const { data, error } = await supabase
+      const { data, error } = await client
         .from("market_candles")
         .select("id,open_time,open,high,low,close")
         .eq("source_venue", "BYBIT")
@@ -187,7 +188,7 @@ export function BtcMarketChart() {
 
     return () => {
       cancelled = true;
-      void supabase.removeChannel(channel);
+      void client.removeChannel(channel);
       observer.disconnect();
       chart.remove();
     };
