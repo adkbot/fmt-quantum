@@ -45,11 +45,6 @@ struct WalletConnectionRecord {
 }
 
 #[derive(Debug, Deserialize)]
-struct ChallengeId {
-    id: String,
-}
-
-#[derive(Debug, Deserialize)]
 struct WalletChallengeRecord {
     id: String,
     user_id: String,
@@ -283,7 +278,7 @@ async fn create_wallet_challenge(
         .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?
         .error_for_status()
         .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?
-        .json::<Vec<ChallengeId>>()
+        .json::<Vec<serde_json::Value>>()
         .await
         .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
     if active_challenges.len() >= 5 {
