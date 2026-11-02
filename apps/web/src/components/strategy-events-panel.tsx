@@ -43,8 +43,9 @@ export function StrategyEventsPanel() {
       return;
     }
 
+    const client = supabase;
     let cancelled = false;
-    const channel = supabase
+    const channel = client
       .channel(`fmt-events-${userId}`)
       .on(
         "postgres_changes",
@@ -71,7 +72,7 @@ export function StrategyEventsPanel() {
       });
 
     async function loadRecent() {
-      const { data, error } = await supabase
+      const { data, error } = await client
         .from("strategy_events")
         .select("id,event_type,source_candle_open_time,reference_price,created_at")
         .eq("user_id", userId)
@@ -97,7 +98,7 @@ export function StrategyEventsPanel() {
     void loadRecent();
     return () => {
       cancelled = true;
-      void supabase.removeChannel(channel);
+      void client.removeChannel(channel);
     };
   }, [userId]);
 
