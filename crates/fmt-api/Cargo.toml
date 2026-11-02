@@ -7,6 +7,10 @@ rust-version.workspace = true
 
 [dependencies]
 axum = "0.7"
+chrono = { version = "0.4", features = ["serde"] }
+ethers-core = "2.0.14"
+hex = "0.4"
+rand = "0.8"
 fmt-risk = { path = "../fmt-risk" }
 http = "1"
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
