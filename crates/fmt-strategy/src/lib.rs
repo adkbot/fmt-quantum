@@ -95,6 +95,7 @@ pub struct FmtEngine {
     pre_low: Option<f64>,
     pre_session_bars: u8,
     pre_session_complete: bool,
+    pre_session_sequence_valid: bool,
     pre_session_last_time: Option<DateTime<Utc>>,
     vwap_date: Option<NaiveDate>,
     vwap_pv: f64,
@@ -113,6 +114,7 @@ impl Default for FmtEngine {
             pre_low: None,
             pre_session_bars: 0,
             pre_session_complete: false,
+            pre_session_sequence_valid: true,
             pre_session_last_time: None,
             vwap_date: None,
             vwap_pv: 0.0,
@@ -150,25 +152,23 @@ impl FmtEngine {
                 self.pre_low = None;
                 self.pre_session_bars = 0;
                 self.pre_session_complete = false;
+                self.pre_session_sequence_valid = true;
                 self.pre_session_last_time = None;
                 self.vwap_date = Some(date);
                 self.vwap_pv = 0.0;
                 self.vwap_volume = 0.0;
             }
             let contiguous = self.pre_session_last_time
-                .is_none_or(|last| candle.open_time.signed_duration_since(last).num_minutes() == 15);
-            if self.pre_session_bars == 0 && minute_of_day != 18 * 60 {
-                self.pre_session_complete = false;
-            } else if !contiguous {
-                self.pre_session_complete = false;
+                .map_or(true, |last| candle.open_time.signed_duration_since(last).num_minutes() == 15);
+            if (self.pre_session_bars == 0 && minute_of_day != 18 * 60) || !contiguous {
+                self.pre_session_sequence_valid = false;
             }
             self.pre_session_bars = self.pre_session_bars.saturating_add(1);
             self.pre_session_last_time = Some(candle.open_time);
-            if self.pre_session_bars == 8 && self.pre_session_complete == false {
+            if self.pre_session_bars == 8 {
                 // The first bar must be 18:00 and all eight M15 bars must be contiguous.
-                self.pre_session_complete = minute_of_day == 19 * 60 + 45 && contiguous;
-            } else if self.pre_session_bars == 8 {
-                self.pre_session_complete = minute_of_day == 19 * 60 + 45 && contiguous;
+                self.pre_session_complete = self.pre_session_sequence_valid
+                    && minute_of_day == 19 * 60 + 45;
             }
             self.pre_high = Some(self.pre_high.map_or(candle.high, |v| v.max(candle.high)));
             self.pre_low = Some(self.pre_low.map_or(candle.low, |v| v.min(candle.low)));
