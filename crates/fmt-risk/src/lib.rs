@@ -103,7 +103,7 @@ pub fn evaluate(config: &RiskConfig, request: &RiskRequest) -> RiskOutcome {
         || !request.requested_notional_usd.is_finite()
         || request.requested_notional_usd <= 0.0
         || !request.required_collateral_usd.is_finite()
-        || request.required_collateral_usd < 0.0
+        || request.required_collateral_usd <= 0.0
         || !request.available_collateral_usd.is_finite()
         || request.available_collateral_usd < 0.0
         || !request.account_equity_usd.is_finite()
