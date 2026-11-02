@@ -111,7 +111,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   const connect = useCallback(async () => {
     const provider = window.ethereum;
-    if (!provider) throw new Error("MetaMask não foi encontrada neste navegador.");
+    if (!provider) {
+      const missing = "MetaMask não foi encontrada neste navegador.";
+      setError(missing);
+      throw new Error(missing);
+    }
     setError(null);
     setIsConnecting(true);
     try {
@@ -151,7 +155,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   const switchChain = useCallback(async (nextChainId: number) => {
     const provider = window.ethereum;
-    if (!provider) throw new Error("MetaMask não foi encontrada.");
+    if (!provider) {
+      const missing = "MetaMask não foi encontrada.";
+      setError(missing);
+      throw new Error(missing);
+    }
     const chainIdHex = `0x${nextChainId.toString(16)}`;
     setError(null);
     try {
@@ -189,7 +197,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   const signMessageAsync = useCallback(async (message: string) => {
     const provider = window.ethereum;
-    if (!provider || !address) throw new Error("Conecte a MetaMask antes de assinar.");
+    if (!provider || !address) {
+      const missing = "Conecte a MetaMask antes de assinar.";
+      setError(missing);
+      throw new Error(missing);
+    }
     setError(null);
     setIsSigning(true);
     try {
