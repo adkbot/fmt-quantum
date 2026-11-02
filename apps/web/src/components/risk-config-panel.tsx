@@ -72,11 +72,12 @@ export function RiskConfigPanel() {
       return;
     }
 
+    const baseUrl = apiUrl.replace(/\/$/, "");
     let cancelled = false;
     async function load() {
       setLoading(true);
       try {
-        const response = await fetch(`${apiUrl.replace(/\/$/, "")}/v1/risk-config`, {
+        const response = await fetch(`${baseUrl}/v1/risk-config`, {
           headers: { Authorization: `Bearer ${accessToken}` }
         });
         if (response.status === 404) {
