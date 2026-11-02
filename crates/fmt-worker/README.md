@@ -8,17 +8,17 @@ First operational worker prototype for the confirmed Bybit M15 data stream.
 2. Loads up to 48 hours of closed M15 candles through REST to reconstruct the current FMT session state.
 3. Connects to the public linear WebSocket topic `kline.15.BTCUSDT`.
 4. Passes only `confirm=true` candles to the Rust FMT engine.
-5. Logs strategy events; it does not create orders.
+5. Logs strategy events and, when server-side Supabase credentials are configured, writes each event to every enabled user's FMT strategy instance.\n6. It does not create orders.
 6. On disconnect, reconnects only after attempting REST backfill. The engine rejects missing or out-of-order candles.
 
 ## Environment
 
 - `BYBIT_ENV=production` or `BYBIT_ENV=testnet`
-- `RUST_LOG=fmt_worker=info` (optional)
+- `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` (optional, server-side event persistence)\n- `RUST_LOG=fmt_worker=info` (optional)
 
 ## Important limitations
 
-- Events are logged only; they are not persisted to Supabase yet.
+- Supabase event persistence is a first pass using the service-role REST API. It is not a durable queue; failed writes are logged and need operational alerting/replay.
 - This worker is single-process and single-stream. Multi-user fan-out and per-user worker isolation are not implemented.
 - Reconnect/backfill is a first pass; production deployment still needs supervised process restarts, alerting, durable checkpoints, rate-limit handling, and load tests.
 - There is no GMX execution path in this worker.
