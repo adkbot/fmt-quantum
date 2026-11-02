@@ -43,6 +43,7 @@ Autonomous order execution is available only while the user's browser session is
 Before enabling the delegated order path:
 
 - Exact parity tests against the user's original Pine Script and exported TradingView candles.
+- A separate server-issued, idempotent execution intent after risk validation. A live WebSocket signal is not authorization; all current strategy events carry `execution_eligible=false`.
 - Per-user risk evaluation using fresh GMX positions, balances, equity, market status, trading capacity, fees, funding, and price divergence.
 - A fail-closed idempotency/locking layer for each user and order intent.
 - Market-symbol mapping from Bybit BTCUSDT to the exact currently active GMX BTC perpetual market; never infer the GMX symbol or address.
