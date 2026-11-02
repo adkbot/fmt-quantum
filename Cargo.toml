@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/fmt-strategy"]
+members = ["crates/fmt-strategy", "crates/bybit-feed"]
 
 [workspace.package]
 edition = "2021"
