@@ -21,7 +21,7 @@ This file separates code that has been authored from code that has actually been
 - `cargo fmt`, `cargo test`, and `cargo clippy` passed in GitHub Actions after checking out current branch commit `0d19e39` (including the paper ledger worker).
 - GMX adapter `npm run typecheck` passed in GitHub Actions on the same validation run.
 - Dashboard TypeScript typecheck and Next.js production build passed in GitHub Actions after checking out commit `0d19e39`, including the EIP-1193 wallet migration and paper ledger UI.
-- Docker Compose configuration and all three container image builds (Rust API/worker, GMX adapter, Next.js dashboard) passed in GitHub Actions. A fresh PostgreSQL 16 migration-application check has been added and is pending.
+- Docker Compose configuration, all three container image builds (Rust API/worker, GMX adapter, Next.js dashboard), and application of the Supabase migration against a temporary PostgreSQL 16 instance passed in GitHub Actions.
 ## Remaining unverified
 
 - The Supabase migration has not been applied to a live Supabase project.
