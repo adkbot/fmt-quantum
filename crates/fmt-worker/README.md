@@ -9,7 +9,7 @@ First operational worker prototype for the confirmed Bybit M15 data stream.
 3. Connects to the public linear WebSocket topic `kline.15.BTCUSDT`.
 4. Passes only `confirm=true` candles to the Rust FMT engine.
 5. Upserts confirmed OHLCV candles into the shared `market_candles` table.
-6. Uses REST backfill to rebuild strategy state, persist candle history, and reconstruct the paper ledger; replayed events are marked `execution_eligible=false`.
+6. Uses REST backfill to rebuild strategy state, persist candle history, and reconstruct the paper ledger; replayed events are marked `is_live_signal=false`; all events remain `execution_eligible=false` until a separate risk-approved intent exists.
 7. Fans live WebSocket FMT signals out to enabled user instances that were active before the current session began; mid-session activations join at the next session to avoid orphan exits.
 8. Persists user-scoped events and updates each user's paper position ledger.
 9. Reconnects only after attempting REST backfill; the engine rejects missing or out-of-order candles.
