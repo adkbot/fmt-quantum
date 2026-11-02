@@ -114,3 +114,6 @@ footer { display: flex; justify-content: space-between; gap: 16px; color: #66758
   .risk-form { grid-template-columns: 1fr; }
   .risk-form .button { width: 100%; }
 }
+
+.wallet-verification { margin-top: 20px; padding-top: 17px; border-top: 1px solid var(--border); }
+.wallet-verification .button { margin-top: 14px; }
