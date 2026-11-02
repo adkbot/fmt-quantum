@@ -58,10 +58,10 @@ fmt-quantum/
 1. Executar CI e corrigir qualquer falha de compilação, tipos ou testes.
 2. Validar paridade do motor FMT com o Pine Script original e candles exportados do TradingView.
 3. Endurecer o worker: fila durável, checkpoints, alertas, reconexão e replay de eventos.
-4. Completar leitura GMX V2, catálogo de mercados ativos, posições, oráculos e comparação de preços Bybit/GMX.
+4. Validar o adaptador GMX somente leitura, completar a validação de mercados ativos e medir continuamente a divergência entre preço Bybit e oráculo GMX.
 5. Integrar o motor de risco a snapshots reais de posições, colateral, equity e limites por usuário.
 6. Implementar paper trading e backtesting com custos, funding, slippage e regras de saída.
 7. Projetar e auditar a autorização limitada de subconta GMX, sem custódia de carteira.
 8. Implementar execução e reconciliação on-chain somente após testes, auditoria e autorização explícita.
 
-Consulte [docs/local-setup.md](docs/local-setup.md), [docs/architecture.md](docs/architecture.md), [docs/strategy-spec.md](docs/strategy-spec.md), [docs/bybit-feed.md](docs/bybit-feed.md) e [docs/risk-engine.md](docs/risk-engine.md) e [docs/security-review.md](docs/security-review.md).
+Consulte [docs/local-setup.md](docs/local-setup.md), [docs/architecture.md](docs/architecture.md), [docs/strategy-spec.md](docs/strategy-spec.md), [docs/bybit-feed.md](docs/bybit-feed.md) [docs/risk-engine.md](docs/risk-engine.md) e [docs/security-review.md](docs/security-review.md).
