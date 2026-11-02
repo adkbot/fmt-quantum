@@ -448,7 +448,7 @@ async fn create_wallet_challenge(
     let address_filter = format!("eq.{}", wallet_address);
     let active_expiry_filter = format!("gt.{}", Utc::now().to_rfc3339());
     let challenge_url = format!("{}/rest/v1/wallet_challenges", state.supabase_url.trim_end_matches('/'));
-    let active_challenges = admin_request(&state, state.http.get(&challenge_url))
+    let active_challenges = admin_request(&state, state.http.get(challenge_url.as_str()))
         .query(&[
             ("select", "id"),
             ("user_id", user_filter.as_str()),
@@ -494,7 +494,7 @@ async fn create_wallet_challenge(
         "message": message,
         "expires_at": expires_at_text
     });
-    admin_request(&state, state.http.post(&challenge_url))
+    admin_request(&state, state.http.post(challenge_url.as_str()))
         .json(&row)
         .send()
         .await
@@ -581,7 +581,7 @@ async fn verify_wallet_signature(
     let expires_filter = format!("gt.{}", now_text);
     let challenge_id_filter = format!("eq.{}", challenge.id);
     let update = json!({"used_at": now_text});
-    let consumed = admin_request(&state, state.http.patch(&challenge_url))
+    let consumed = admin_request(&state, state.http.patch(challenge_url.as_str()))
         .query(&[
             ("id", challenge_id_filter.as_str()),
             ("user_id", user_filter.as_str()),
