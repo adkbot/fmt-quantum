@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useAccount, useSignMessage } from "wagmi";
-import { arbitrum } from "wagmi/chains";
+import { useWallet } from "@/lib/wallet-context";
 import { supabase } from "@/lib/supabase";
 
 type WalletConnection = {
@@ -26,8 +25,7 @@ type VerifyResponse = {
 };
 
 export function WalletVerificationPanel() {
-  const { address, chainId, isConnected } = useAccount();
-  const { signMessageAsync, isPending: isSigning } = useSignMessage();
+  const { address, chainId, isConnected, signMessageAsync, isSigning } = useWallet();
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [verifiedAddress, setVerifiedAddress] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -49,7 +47,7 @@ export function WalletVerificationPanel() {
   }, [accessToken, address, chainId]);
 
   useEffect(() => {
-    if (!accessToken || !address || chainId !== arbitrum.id) return;
+    if (!accessToken || !address || chainId !== 42161) return;
     const apiUrl = process.env.NEXT_PUBLIC_API_URL;
     if (!apiUrl) return;
     const baseUrl = apiUrl.replace(/\/$/, "");
