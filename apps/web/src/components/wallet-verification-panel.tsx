@@ -62,7 +62,7 @@ export function WalletVerificationPanel() {
         if (!response.ok) return;
         const wallets = (await response.json()) as WalletConnection[];
         const match = wallets.find((wallet) =>
-          wallet.chain_id === arbitrum.id &&
+          wallet.chain_id === 42161 &&
           wallet.wallet_address.toLowerCase() === connectedAddress.toLowerCase()
         );
         if (!cancelled) setVerifiedAddress(match?.wallet_address ?? null);
@@ -108,7 +108,7 @@ export function WalletVerificationPanel() {
       setMessage("Conecte primeiro sua MetaMask.");
       return;
     }
-    if (chainId !== arbitrum.id) {
+    if (chainId !== 42161) {
       setMessage("Troque a rede da carteira para Arbitrum One.");
       return;
     }
@@ -133,14 +133,14 @@ export function WalletVerificationPanel() {
           Authorization: `Bearer ${accessToken}`,
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({ wallet_address: address, chain_id: arbitrum.id })
+        body: JSON.stringify({ wallet_address: address, chain_id: 42161 })
       });
       if (!challengeResponse.ok) {
         throw new Error(`Não foi possível criar o desafio (HTTP ${challengeResponse.status}).`);
       }
       const challenge = (await challengeResponse.json()) as ChallengeResponse;
       setMessage("Confirme a assinatura da mensagem na MetaMask. Ela não é uma transação.");
-      const signature = await signMessageAsync({ message: challenge.message });
+      const signature = await signMessageAsync(challenge.message);
 
       const verifyResponse = await fetch(`${baseUrl}/v1/wallet/verify`, {
         method: "POST",
@@ -150,7 +150,7 @@ export function WalletVerificationPanel() {
         },
         body: JSON.stringify({
           wallet_address: address,
-          chain_id: arbitrum.id,
+          chain_id: 42161,
           nonce: challenge.nonce,
           signature
         })
@@ -188,7 +188,7 @@ export function WalletVerificationPanel() {
         <button
           className="button primary"
           onClick={verifyWallet}
-          disabled={!isConnected || !accessToken || busy || isSigning || chainId !== arbitrum.id}
+          disabled={!isConnected || !accessToken || busy || isSigning || chainId !== 42161}
         >
           {busy || isSigning ? "PROCESSANDO..." : "VERIFICAR CARTEIRA"}
         </button>
