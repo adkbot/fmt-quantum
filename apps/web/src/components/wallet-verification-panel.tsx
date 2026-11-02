@@ -85,6 +85,7 @@ export function WalletVerificationPanel() {
       setMessage("API não configurada.");
       return;
     }
+    const baseUrl = apiUrl.replace(/\/$/, "");
     setBusy(true);
     try {
       const url = new URL(`${baseUrl}/v1/wallets`);
