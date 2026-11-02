@@ -136,3 +136,11 @@ footer { display: flex; justify-content: space-between; gap: 16px; color: #66758
 .event-row strong { color: var(--cyan); font: 600 10px "DM Mono", monospace; letter-spacing: .04em; }
 .event-row span { color: var(--muted); font-size: 10px; }
 .event-row b { color: var(--text); font: 500 12px "DM Mono", monospace; }
+
+.market-chart { margin-top: 18px; padding: 22px; }
+.market-chart .panel-heading { margin-bottom: 12px; }
+.chart-container { width: 100%; height: 340px; overflow: hidden; }
+@media (max-width: 620px) {
+  .market-chart { padding: 14px; }
+  .chart-container { height: 280px; }
+}
