@@ -79,7 +79,7 @@ export function WalletVerificationPanel() {
     }
     setBusy(true);
     try {
-      const url = new URL(`${apiUrl.replace(/\\/$/, "")}/v1/wallets`);
+      const url = new URL(`${apiUrl.replace(/\/$/, "")}/v1/wallets`);
       url.searchParams.set("wallet_address", verifiedAddress);
       const response = await fetch(url, {
         method: "DELETE",
