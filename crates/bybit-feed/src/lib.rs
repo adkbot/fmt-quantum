@@ -292,7 +292,7 @@ impl BybitKlineStream {
     /// backfill; this method never silently resumes after a gap.
     pub async fn run_until_disconnect<F>(self, mut on_closed_candle: F) -> Result<(), BybitError>
     where
-        F: FnMut(Candle) + Send,
+        F: FnMut(Candle) -> Result<(), String> + Send,
     {
         let (mut writer, mut reader) = self.socket.split();
         let mut last_open_time = self.last_open_time;
@@ -347,7 +347,7 @@ impl BybitKlineStream {
                                 candle.validate()
                                     .map_err(|e| BybitError::InvalidResponse(e.to_string()))?;
                                 last_open_time = Some(candle.open_time);
-                                on_closed_candle(candle);
+                                on_closed_candle(candle).map_err(BybitError::InvalidResponse)?;
                             }
                         }
                         Message::Ping(payload) => {
