@@ -45,6 +45,11 @@ struct WalletConnectionRecord {
 }
 
 #[derive(Debug, Deserialize)]
+struct ChallengeId {
+    id: String,
+}
+
+#[derive(Debug, Deserialize)]
 struct WalletChallengeRecord {
     id: String,
     user_id: String,
@@ -260,6 +265,31 @@ async fn create_wallet_challenge(
         return Err(StatusCode::BAD_REQUEST);
     }
     let wallet_address = normalize_wallet_address(&request.wallet_address)?;
+    let user_filter = format!("eq.{}", user.id);
+    let address_filter = format!("eq.{}", wallet_address);
+    let active_expiry_filter = format!("gt.{}", Utc::now().to_rfc3339());
+    let challenge_url = format!("{}/rest/v1/wallet_challenges", state.supabase_url.trim_end_matches('/'));
+    let active_challenges = admin_request(&state, state.http.get(&challenge_url))
+        .query(&[
+            ("select", "id"),
+            ("user_id", user_filter.as_str()),
+            ("wallet_address", address_filter.as_str()),
+            ("used_at", "is.null"),
+            ("expires_at", active_expiry_filter.as_str()),
+            ("limit", "5"),
+        ])
+        .send()
+        .await
+        .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?
+        .error_for_status()
+        .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?
+        .json::<Vec<ChallengeId>>()
+        .await
+        .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
+    if active_challenges.len() >= 5 {
+        return Err(StatusCode::TOO_MANY_REQUESTS);
+    }
+
     let mut nonce_bytes = [0_u8; 32];
     OsRng.fill_bytes(&mut nonce_bytes);
     let nonce = hex::encode(nonce_bytes);
@@ -285,8 +315,7 @@ async fn create_wallet_challenge(
         "message": message,
         "expires_at": expires_at_text
     });
-    let url = format!("{}/rest/v1/wallet_challenges", state.supabase_url.trim_end_matches('/'));
-    admin_request(&state, state.http.post(url))
+    admin_request(&state, state.http.post(&challenge_url))
         .json(&row)
         .send()
         .await
