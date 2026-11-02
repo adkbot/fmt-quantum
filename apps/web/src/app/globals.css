@@ -100,3 +100,5 @@ footer { display: flex; justify-content: space-between; gap: 16px; color: #66758
   .auth-form { flex-direction: column; }
   .auth-form .button { width: 100%; }
 }
+
+.api-status { color: var(--muted); font: 10px 'DM Mono', monospace; line-height: 1.6; margin: 10px 0 0; }
