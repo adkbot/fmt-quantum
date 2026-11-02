@@ -71,6 +71,9 @@ create table if not exists public.strategy_instances (
   updated_at timestamptz not null default now()
 );
 
+create unique index if not exists idx_strategy_instances_user_unique
+  on public.strategy_instances(user_id, strategy_code, source_symbol);
+
 create table if not exists public.strategy_events (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -155,13 +158,6 @@ create policy "risk owner can read" on public.risk_configs
   for select to authenticated using (user_id = auth.uid());
 create policy "strategy owner can read" on public.strategy_instances
   for select to authenticated using (user_id = auth.uid());
-create policy "strategy owner can insert" on public.strategy_instances
-  for insert to authenticated with check (user_id = auth.uid());
-create policy "strategy owner can update" on public.strategy_instances
-  for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
-create policy "strategy owner can delete" on public.strategy_instances
-  for delete to authenticated using (user_id = auth.uid());
-
 create policy "event owner can read" on public.strategy_events
   for select to authenticated using (user_id = auth.uid());
 create policy "position owner can read" on public.position_snapshots
