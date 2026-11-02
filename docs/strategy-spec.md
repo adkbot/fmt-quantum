@@ -37,7 +37,7 @@ A acumulação começa no início da janela pré-Tóquio e continua durante a se
 - Peso: `volume`.
 - VWAP: soma de `hlc3 * volume` dividida pela soma de volume.
 
-A estratégia precisa de candles OHLCV para reproduzir a VWAP. A fonte de referência informada pelo usuário é **`BYBIT:BTCUSDT` no TradingView**, timeframe M15. A API oficial de candles GMX e o método `fetchOhlcv()` do SDK v2 documentam OHLC, mas não volume. Portanto, os cálculos de faixa, sinais e VWAP devem usar candles OHLCV de Bybit correspondentes exatamente ao símbolo confirmado, preservando a mesma fonte para todo o cálculo. A GMX será consultada separadamente para validar preço/oráculo, mercado ativo e execução. Diferenças entre as fontes devem ser medidas e limitadas, não ocultadas. Antes de integrar, verificar na Bybit se o símbolo TradingView corresponde ao mercado spot ou ao contrato perpétuo linear; não presumir o tipo apenas pelo texto do ticker.
+A estratégia precisa de candles OHLCV para reproduzir a VWAP. A fonte de referência informada pelo usuário é **`BYBIT:BTCUSDT` no TradingView**, timeframe M15. A API oficial de candles GMX e o método `fetchOhlcv()` do SDK v2 documentam OHLC, mas não volume. Portanto, os cálculos de faixa, sinais e VWAP devem usar candles OHLCV de Bybit correspondentes exatamente ao símbolo confirmado, preservando a mesma fonte para todo o cálculo. A GMX será consultada separadamente para validar preço/oráculo, mercado ativo e execução. Diferenças entre as fontes devem ser medidas e limitadas, não ocultadas. O usuário confirmou que o gráfico é do mercado **perpétuo**. A integração deve usar o mercado linear USDT da Bybit (categoria `linear`) para `BTCUSDT`, intervalo de 15 minutos, e validar que o instrumento está ativo antes de consumir os candles.
 
 ## Condição original de compra
 
@@ -73,8 +73,7 @@ O indicador mantém `emOperacao` e `tipoOperacao`. Ao iniciar a sessão, reinici
 
 ## Pontos que ainda exigem confirmação
 
-1. Confirmar se `BYBIT:BTCUSDT` no gráfico TradingView é spot ou perpétuo; a integração não deve presumir.
-2. Comportamento esperado quando saída e nova entrada aparecem no mesmo candle.
+1. Comportamento esperado quando saída e nova entrada aparecem no mesmo candle.
 
 ## Critério de paridade
 
