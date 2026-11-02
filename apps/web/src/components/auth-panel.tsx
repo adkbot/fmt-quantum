@@ -20,7 +20,7 @@ export function AuthPanel() {
         return;
       }
       try {
-        const response = await fetch(`${apiUrl.replace(/\\/$/, "")}/v1/me`, {
+        const response = await fetch(`${apiUrl.replace(/\/$/, "")}/v1/me`, {
           headers: { Authorization: `Bearer ${accessToken}` }
         });
         if (!response.ok) {
