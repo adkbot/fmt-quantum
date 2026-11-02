@@ -354,6 +354,56 @@ mod tests {
     }
 
     #[test]
+    fn incomplete_pre_session_range_blocks_signals() {
+        let mut engine = FmtEngine::new();
+        for index in 1..8 {
+            let total_minutes = index * 15;
+            let hour = 18 + total_minutes / 60;
+            let minute = total_minutes % 60;
+            engine
+                .on_candle(local_candle(hour, minute, 101.0, 98.0, 99.0))
+                .unwrap();
+        }
+        let events = engine
+            .on_candle(local_candle(20, 0, 102.0, 98.0, 101.0))
+            .unwrap();
+        assert!(!events.iter().any(|event| matches!(event, StrategyEvent::Enter { .. })));
+    }
+
+    #[test]
+    fn exit_then_entry_can_both_emit_on_the_same_candle() {
+        let mut engine = FmtEngine::new();
+        for index in 0..8 {
+            let total_minutes = index * 15;
+            let hour = 18 + total_minutes / 60;
+            let minute = total_minutes % 60;
+            let bar = if index == 7 {
+                local_candle(hour, minute, 101.0, 98.0, 99.0)
+            } else {
+                local_candle(hour, minute, 101.0, 99.0, 100.0)
+            };
+            engine.on_candle(bar).unwrap();
+        }
+
+        let entry = engine.on_candle(local_candle(20, 0, 102.0, 98.0, 101.0)).unwrap();
+        assert!(entry.iter().any(|event| matches!(
+            event,
+            StrategyEvent::Enter { side: Side::Buy, .. }
+        )));
+
+        let same_bar_exit_and_reentry = engine
+            .on_candle(local_candle(20, 15, 101.0, 98.0, 101.0))
+            .unwrap();
+        assert!(matches!(
+            same_bar_exit_and_reentry.as_slice(),
+            [
+                StrategyEvent::Exit { side: Side::Buy, .. },
+                StrategyEvent::Enter { side: Side::Buy, .. }
+            ]
+        ));
+    }
+
+    #[test]
     fn first_tokyo_signal_uses_previous_pre_session_close() {
         let mut engine = FmtEngine::new();
         for index in 0..8 {
