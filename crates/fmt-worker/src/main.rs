@@ -1,6 +1,6 @@
 use bybit_feed::{BybitClient, BybitKlineStream, Environment};
 use chrono::{DateTime, Duration, Utc};
-use fmt_strategy::{ExitReason, FmtEngine, Side, StrategyEvent};
+use fmt_strategy::{FmtEngine, Side, StrategyEvent};
 use reqwest::Client;
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -100,7 +100,7 @@ impl SupabaseEventStore {
                 "event_type": event_type,
                 "source_candle_open_time": event_time.to_rfc3339(),
                 "reference_price": reference_price,
-                "payload": detail,
+                "payload": detail.clone(),
             });
             self.authenticated_request(self.http.post(&events_url))
                 .query(&[(
