@@ -8,13 +8,13 @@ First operational worker prototype for the confirmed Bybit M15 data stream.
 2. Loads up to 48 hours of closed M15 candles through REST to reconstruct the current FMT session state.
 3. Connects to the public linear WebSocket topic `kline.15.BTCUSDT`.
 4. Passes only `confirm=true` candles to the Rust FMT engine.
-5. Logs strategy events and, when server-side Supabase credentials are configured, writes each event to every enabled user's FMT strategy instance.\n6. It does not create orders.
+5. Upserts confirmed OHLCV candles into the shared `market_candles` table.\n6. Logs strategy events and writes each event to every enabled user's FMT strategy instance.\n7. It does not create orders.
 6. On disconnect, reconnects only after attempting REST backfill. The engine rejects missing or out-of-order candles.
 
 ## Environment
 
 - `BYBIT_ENV=production` or `BYBIT_ENV=testnet`
-- `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` (optional, server-side event persistence)\n- `RUST_LOG=fmt_worker=info` (optional)
+- `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` (required for candle/event persistence and dashboard Realtime)\n- `RUST_LOG=fmt_worker=info` (optional)
 
 ## Important limitations
 
