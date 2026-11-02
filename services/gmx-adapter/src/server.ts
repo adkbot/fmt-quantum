@@ -1,4 +1,4 @@
-import Fastify from "fastify";
+import Fastify, { type FastifyReply } from "fastify";
 import { GmxReadAdapter, type WalletAddress } from "./client.js";
 
 const app = Fastify({ logger: true });
@@ -10,11 +10,10 @@ if (!internalKey) {
 }
 
 function jsonSafe(value: unknown): unknown {
-  return JSON.parse(
-    JSON.stringify(value, (_key, item: unknown) =>
-      typeof item === "bigint" ? item.toString() : item
-    )
-  ) as unknown;
+  const serialized = JSON.stringify(value, (_key, item: unknown) =>
+    typeof item === "bigint" ? item.toString() : item
+  );
+  return serialized === undefined ? null : JSON.parse(serialized);
 }
 
 app.addHook("onRequest", async (request, reply) => {
@@ -65,8 +64,8 @@ app.get<{ Querystring: { symbols?: string } }>("/tickers", async (request, reply
   }
 });
 
-function requestError(reply: typeof app extends never ? never : import("fastify").FastifyReply, error: unknown) {
-  request.log?.error;
+function requestError(reply: FastifyReply, error: unknown) {
+  app.log.error({ err: error }, "GMX read request failed");
   const message = error instanceof Error ? error.message : "GMX adapter request failed";
   return reply.code(502).send({ error: "gmx_read_failed", message });
 }
