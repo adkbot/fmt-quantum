@@ -11,7 +11,7 @@ use thiserror::Error;
 
 const MINUTES_PER_CANDLE: u32 = 15;
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Candle {
     pub open_time: DateTime<Utc>,
     pub open: f64,
