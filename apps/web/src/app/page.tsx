@@ -2,6 +2,7 @@
 
 import { useAccount, useConnect, useDisconnect, useSwitchChain } from "wagmi";
 import { AuthPanel } from "@/components/auth-panel";
+import { RiskConfigPanel } from "@/components/risk-config-panel";
 import { arbitrum } from "wagmi/chains";
 
 function shortAddress(address?: string) {
@@ -117,6 +118,7 @@ export default function HomePage() {
             <span>Sem permissão de saque solicitada</span>
           </div>
           <AuthPanel />
+          <RiskConfigPanel />
         </article>
       </section>
 
