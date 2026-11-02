@@ -301,9 +301,9 @@ impl BybitKlineStream {
                                     continue;
                                 }
                                 let candle = parse_ws_kline(row)?;
-                                if let Some(last) = last_open_time {
+                                if let Some(last) = last_open_time.as_ref() {
                                     let gap_minutes = candle.open_time
-                                        .signed_duration_since(last)
+                                        .signed_duration_since(last.clone())
                                         .num_minutes();
                                     if gap_minutes < 0 {
                                         return Err(BybitError::InvalidResponse(
