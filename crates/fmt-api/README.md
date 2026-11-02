@@ -5,7 +5,7 @@ First Rust HTTP service scaffold.
 ## Routes
 
 - `GET /health`: public health/status response. It always reports `execution_enabled: false`.
-- `GET /v1/me`: protected identity route. Requires a Supabase access token in the Bearer authorization header.
+- `GET /v1/me`: protected identity route. Requires a Supabase access token in the Bearer authorization header.\n- `GET /v1/risk-config`: reads the authenticated user's risk limits.\n- `PUT /v1/risk-config`: validates and upserts the authenticated user's risk limits; the maximum open-position count is hard-capped at 8.
 
 The `/v1/me` handler validates the token against Supabase Auth's `/auth/v1/user` endpoint and returns the authenticated user ID.
 
@@ -20,4 +20,4 @@ The service-role key is not used by this service and must never be sent to the b
 
 ## Not yet implemented
 
-No database access, user risk-config routes, wallet signature challenge, Bybit feed worker, GMX position reconciliation, execution endpoint, or trading routes are included. This API cannot place orders.
+No wallet signature challenge, GMX position reconciliation, execution endpoint, or trading routes are included. Risk configuration reads/writes use the Supabase REST API with the service-role key on the server. This API cannot place orders.
