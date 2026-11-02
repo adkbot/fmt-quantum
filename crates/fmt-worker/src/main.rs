@@ -267,6 +267,7 @@ async fn main() {
                     })
                     .await;
 
+                drop(callback_tx);
                 drop(event_tx);
                 if let Err(error) = persistence_task.await {
                     error!(%error, "Event persistence task failed");
