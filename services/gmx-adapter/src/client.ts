@@ -46,7 +46,10 @@ export class GmxReadAdapter {
     return { address, positions, orders, balances };
   }
 
-  async getMarketTickers(symbols?: string[]) {
-    return this.sdk.fetchMarketsTickers(symbols?.length ? { symbols } : {});
+  async getMarketTickers(symbols: string[]) {
+    if (symbols.length === 0) {
+      throw new Error("At least one GMX market symbol is required");
+    }
+    return this.sdk.fetchMarketsTickers({ symbols });
   }
 }
