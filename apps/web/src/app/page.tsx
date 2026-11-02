@@ -15,7 +15,7 @@ function shortAddress(address?: string) {
 }
 
 export default function HomePage() {
-  const { address, chainId, isConnected, isConnecting, connect, disconnect, switchChain } = useWallet();
+  const { address, chainId, isConnected, isConnecting, connect, disconnect, switchChain, error: walletError } = useWallet();
   const wrongNetwork = isConnected && chainId !== 42161;
 
   return (
@@ -51,6 +51,8 @@ export default function HomePage() {
           )}
         </div>
       </header>
+
+      {walletError ? <p className="api-status wallet-error">{walletError}</p> : null}
 
       <section className="welcome">
         <div>
