@@ -64,4 +64,4 @@ fmt-quantum/
 7. Projetar e auditar a autorização limitada de subconta GMX, sem custódia de carteira.
 8. Implementar execução e reconciliação on-chain somente após testes, auditoria e autorização explícita.
 
-Consulte [docs/local-setup.md](docs/local-setup.md), [docs/architecture.md](docs/architecture.md), [docs/strategy-spec.md](docs/strategy-spec.md), [docs/bybit-feed.md](docs/bybit-feed.md) [docs/risk-engine.md](docs/risk-engine.md) e [docs/security-review.md](docs/security-review.md).
+Consulte [docs/local-setup.md](docs/local-setup.md), [docs/architecture.md](docs/architecture.md), [docs/strategy-spec.md](docs/strategy-spec.md), [docs/bybit-feed.md](docs/bybit-feed.md) [docs/risk-engine.md](docs/risk-engine.md) e [docs/security-review.md](docs/security-review.md) e [docs/validation-status.md](docs/validation-status.md).
