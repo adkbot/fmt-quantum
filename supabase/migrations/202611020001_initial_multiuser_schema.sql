@@ -71,6 +71,22 @@ create table if not exists public.strategy_instances (
   updated_at timestamptz not null default now()
 );
 
+create or replace function public.set_updated_at()
+returns trigger
+language plpgsql
+set search_path = public
+as $
+begin
+  new.updated_at = now();
+  return new;
+end;
+$;
+
+drop trigger if exists strategy_instances_set_updated_at on public.strategy_instances;
+create trigger strategy_instances_set_updated_at
+  before update on public.strategy_instances
+  for each row execute procedure public.set_updated_at();
+
 create unique index if not exists idx_strategy_instances_user_unique
   on public.strategy_instances(user_id, strategy_code, source_symbol);
 
