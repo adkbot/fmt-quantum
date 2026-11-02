@@ -66,18 +66,18 @@ export default function HomePage() {
       <section className="metrics-grid">
         <article className="panel metric">
           <span className="metric-label">FEED BYBIT</span>
-          <strong className="metric-value muted">OFFLINE</strong>
-          <span className="metric-note">WebSocket ainda não conectado ao painel</span>
+          <strong className="metric-value">REST + WS</strong>
+          <span className="metric-note">Worker separado; status ainda não transmitido ao painel</span>
         </article>
         <article className="panel metric">
           <span className="metric-label">MOTOR FMT</span>
-          <strong className="metric-value">M15</strong>
-          <span className="metric-note">Motor Rust em implementação</span>
+          <strong className="metric-value">RUST M15</strong>
+          <span className="metric-note">Regras traduzidas; paridade com Pine ainda pendente</span>
         </article>
         <article className="panel metric">
           <span className="metric-label">GMX V2</span>
           <strong className="metric-value muted">SOMENTE LEITURA</strong>
-          <span className="metric-note">Adaptador inicial para Arbitrum One</span>
+          <span className="metric-note">Snapshot sob demanda de carteira verificada</span>
         </article>
         <article className="panel metric">
           <span className="metric-label">EXECUÇÃO</span>
@@ -90,10 +90,10 @@ export default function HomePage() {
         <article className="panel strategy-panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">ESTRATÉGIA ATIVA</div>
+              <div className="eyebrow">MOTOR DE ESTRATÉGIA</div>
               <h2>FMT Tóquio · BTCUSDT</h2>
             </div>
-            <span className="tag">CONFIGURADA</span>
+            <span className="tag">FMT M15</span>
           </div>
           <div className="rule-list">
             <div><span>Mercado de referência</span><b>Bybit Linear Perpetual</b></div>
@@ -112,7 +112,7 @@ export default function HomePage() {
           {isConnected ? (
             <>
               <p className="wallet-full">{address}</p>
-              <p className="muted-copy">Conexão detectada no navegador. A propriedade da carteira ainda precisa ser verificada por assinatura antes de habilitar funções da conta.</p>
+              <p className="muted-copy">Conexão detectada no navegador. Use o painel de verificação EIP-191 abaixo para associar esta carteira à sua conta.</p>
             </>
           ) : (
             <p className="muted-copy">A carteira principal permanece sob sua custódia. O sistema não solicita nem armazena sua chave privada ou frase-semente.</p>
