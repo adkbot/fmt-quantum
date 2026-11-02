@@ -2,7 +2,7 @@
 
 ## Fonte
 
-Esta especificação registra as regras de FMT descritas pelo usuário e confirmadas durante a configuração do projeto. O arquivo literal do Pine Script original ainda não foi localizado na conversa nem na Biblioteca. Portanto, a implementação atual é uma tradução inicial da especificação, não uma paridade comprovada com o código Pine. O arquivo original será necessário para validar equivalência exata; nenhuma regra deve ser alterada silenciosamente.
+Esta especificação registra as regras de FMT descritas pelo usuário e confirmadas durante a configuração do projeto. O usuário forneceu o código literal Pine Script v5 nesta conversa. A cópia de referência está em `docs/reference/fmt-tokyo-original.pine`. O motor Rust atual implementa a sequência central das regras; a paridade numérica candle a candle ainda depende de executar ambos sobre a mesma exportação OHLCV do TradingView.
 
 ## Timeframe de referência confirmado
 
@@ -80,17 +80,17 @@ O indicador mantém `emOperacao` e `tipoOperacao`. Ao iniciar a sessão, reinici
 - A faixa pré-sessão só é considerada válida quando os oito candles M15 entre 18:00 e 19:45 estão presentes e contíguos.
 - O primeiro candle de Tóquio usa o fechamento do candle imediatamente anterior (19:45) para reproduzir `close[1]`.
 - A série é rejeitada quando há candles duplicados, fora de ordem ou lacunas M15; é necessário fazer backfill antes de retomar.
-- O motor avalia saída antes de entrada no mesmo candle, permitindo dois eventos sequenciais quando ambas as condições se verificam. Isso continua sujeito à comparação com o arquivo Pine original, ainda não localizado; não é autorização para enviar duas ordens sem reconciliação de risco.
+- O motor avalia saída antes de entrada no mesmo candle, permitindo dois eventos sequenciais quando ambas as condições se verificam. O Pine original fornecido confirma essa ordem. Não é autorização para enviar duas ordens sem reconciliação de risco.
 
 ## Critério de paridade
 
-Antes de habilitar execução, o usuário deverá fornecer o arquivo literal do Pine Script e uma exportação de candles M15 do TradingView. Criar testes de referência e comparar:
+Antes de habilitar execução, usar o Pine literal já arquivado e obter uma exportação de candles M15 do TradingView para comparar ambos os cálculos. Criar testes de referência e comparar:
 - início/fim de sessão;
 - máxima e mínima pré-sessão;
 - VWAP em cada candle;
 - sinais de compra e venda;
 - condições de saída;
 - transições de estado;
-- comportamento em virada de dia e mudanças de horário de verão.
+- comportamento em virada de dia e mudanças de horário de verão.\n\nA guarda do motor que exige os oito candles M15 completos e contíguos das 18:00 às 19:45 é uma proteção de integridade de dados: o Pine fornecido não contém essa validação explícita. Ela não altera o cálculo quando o histórico está completo, mas pode suprimir sinais em inicializações com histórico parcial. Essa diferença deve permanecer documentada e testada.
 
 Qualquer diferença em relação ao indicador original deve ser documentada e aprovada antes de ser incorporada.
