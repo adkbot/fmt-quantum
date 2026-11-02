@@ -7,6 +7,8 @@ Initial Rust HTTP API service.
 - `GET /health`: public health/status response. It always reports `execution_enabled: false`.
 - `GET /v1/me`: protected identity route. Requires a Supabase access token in the Bearer authorization header.
 - `GET /v1/risk-config`: reads the authenticated user's risk limits.
+- `GET /v1/strategy`: reads the authenticated user's FMT Tóquio BTCUSDT M15 monitoring instance.
+- `PUT /v1/strategy`: enables/disables that user's monitoring instance. Enabling requires a saved risk configuration.
 - `PUT /v1/risk-config`: validates and upserts the authenticated user's risk limits; the maximum open-position count is hard-capped at 8.
 - `GET /v1/wallets`: lists the authenticated user's verified wallet addresses.
 - `GET /v1/gmx/markets`: proxies the GMX V2 market catalog to an authenticated user.
