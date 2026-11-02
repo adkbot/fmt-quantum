@@ -31,6 +31,8 @@ Plataforma multiusuário não custodial para análise FMT e futura execução de
 ```text
 fmt-quantum/
 ├── Cargo.toml
+├── Dockerfile.rust
+├── docker-compose.yml
 ├── crates/
 │   ├── fmt-strategy/        # Motor inicial FMT M15
 │   ├── bybit-feed/          # Feed REST + WebSocket confirmado
@@ -44,6 +46,8 @@ fmt-quantum/
 ├── supabase/
 │   └── migrations/          # Esquema multiusuário e RLS
 ├── .github/workflows/       # CI Rust e TypeScript
+├── apps/web/Dockerfile      # Imagem de produção Next.js
+├── services/gmx-adapter/Dockerfile # Imagem do adaptador GMX
 └── docs/
 ```
 
@@ -58,4 +62,4 @@ fmt-quantum/
 7. Projetar e auditar a autorização limitada de subconta GMX, sem custódia de carteira.
 8. Implementar execução e reconciliação on-chain somente após testes, auditoria e autorização explícita.
 
-Consulte [docs/architecture.md](docs/architecture.md), [docs/strategy-spec.md](docs/strategy-spec.md), [docs/bybit-feed.md](docs/bybit-feed.md) e [docs/risk-engine.md](docs/risk-engine.md) e [docs/security-review.md](docs/security-review.md).
+Consulte [docs/local-setup.md](docs/local-setup.md), [docs/architecture.md](docs/architecture.md), [docs/strategy-spec.md](docs/strategy-spec.md), [docs/bybit-feed.md](docs/bybit-feed.md) e [docs/risk-engine.md](docs/risk-engine.md) e [docs/security-review.md](docs/security-review.md).
