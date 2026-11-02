@@ -59,6 +59,22 @@ struct WalletChallengeRecord {
 }
 
 #[derive(Debug, Deserialize)]
+struct StrategyToggleRequest {
+    enabled: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct StrategyInstanceRecord {
+    id: String,
+    user_id: String,
+    strategy_code: String,
+    source_symbol: String,
+    is_enabled: bool,
+    created_at: String,
+    updated_at: String,
+}
+
+#[derive(Debug, Deserialize)]
 struct GmxAccountQuery {
     wallet_address: String,
 }
@@ -255,6 +271,91 @@ async fn get_wallet_connections(
         .await
         .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
     Ok(Json(rows))
+}
+
+async fn get_strategy_instance(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<Vec<StrategyInstanceRecord>>, StatusCode> {
+    let user = authenticate_user(&state, &headers).await?;
+    let url = format!("{}/rest/v1/strategy_instances", state.supabase_url.trim_end_matches('/'));
+    let user_filter = format!("eq.{}", user.id);
+    let rows = admin_request(&state, state.http.get(url))
+        .query(&[
+            ("select", "id,user_id,strategy_code,source_symbol,is_enabled,created_at,updated_at"),
+            ("user_id", user_filter.as_str()),
+            ("strategy_code", "eq.FMT_TOKYO_M15"),
+            ("source_symbol", "eq.BTCUSDT"),
+            ("limit", "1"),
+        ])
+        .send()
+        .await
+        .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?
+        .error_for_status()
+        .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?
+        .json::<Vec<StrategyInstanceRecord>>()
+        .await
+        .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
+    Ok(Json(rows))
+}
+
+async fn put_strategy_instance(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(request): Json<StrategyToggleRequest>,
+) -> Result<Json<StrategyInstanceRecord>, StatusCode> {
+    let user = authenticate_user(&state, &headers).await?;
+
+    if request.enabled {
+        let user_filter = format!("eq.{}", user.id);
+        let risk_url = format!("{}/rest/v1/risk_configs", state.supabase_url.trim_end_matches('/'));
+        let risk_configs = admin_request(&state, state.http.get(risk_url))
+            .query(&[
+                ("select", "user_id"),
+                ("user_id", user_filter.as_str()),
+                ("limit", "1"),
+            ])
+            .send()
+            .await
+            .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?
+            .error_for_status()
+            .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?
+            .json::<Vec<serde_json::Value>>()
+            .await
+            .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
+        if risk_configs.is_empty() {
+            return Err(StatusCode::CONFLICT);
+        }
+    }
+
+    let url = format!("{}/rest/v1/strategy_instances", state.supabase_url.trim_end_matches('/'));
+    let record = json!({
+        "user_id": user.id,
+        "strategy_code": "FMT_TOKYO_M15",
+        "source_venue": "BYBIT",
+        "source_category": "linear",
+        "source_symbol": "BTCUSDT",
+        "timeframe_minutes": 15,
+        "session_timezone": "America/New_York",
+        "pre_session_start": "18:00:00",
+        "tokyo_session_start": "20:00:00",
+        "tokyo_session_end": "06:00:00",
+        "is_enabled": request.enabled
+    });
+    let rows = admin_request(&state, state.http.post(url))
+        .query(&[("on_conflict", "user_id,strategy_code,source_symbol")])
+        .header("Prefer", "resolution=merge-duplicates,return=representation")
+        .json(&record)
+        .send()
+        .await
+        .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?
+        .error_for_status()
+        .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?
+        .json::<Vec<StrategyInstanceRecord>>()
+        .await
+        .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
+
+    rows.into_iter().next().map(Json).ok_or(StatusCode::SERVICE_UNAVAILABLE)
 }
 
 async fn get_gmx_markets(
@@ -558,6 +659,7 @@ async fn main() {
             "/v1/risk-config",
             get(get_risk_config).put(put_risk_config),
         )
+        .route("/v1/strategy", get(get_strategy_instance).put(put_strategy_instance))
         .route("/v1/gmx/markets", get(get_gmx_markets))
         .route("/v1/gmx/account", get(get_gmx_account))
         .route("/v1/wallets", get(get_wallet_connections))
