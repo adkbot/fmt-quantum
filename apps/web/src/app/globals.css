@@ -123,3 +123,6 @@ footer { display: flex; justify-content: space-between; gap: 16px; color: #66758
 .gmx-json { margin-top: 16px; border-top: 1px solid var(--border); padding-top: 12px; }
 .gmx-json summary { color: var(--cyan); cursor: pointer; font: 500 10px "DM Mono", monospace; letter-spacing: .08em; }
 .gmx-json pre { max-height: 420px; overflow: auto; margin: 12px 0 0; padding: 14px; border: 1px solid var(--border); border-radius: 8px; background: #070b10; color: #c6d4df; font: 10px/1.6 "DM Mono", monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+.strategy-control { margin-top: 18px; padding-top: 17px; border-top: 1px solid var(--border); }
+.strategy-control .button { margin-top: 12px; }
