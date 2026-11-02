@@ -70,22 +70,35 @@ impl SupabaseEventStore {
         };
 
         let strategies_url = format!("{}/rest/v1/strategy_instances", self.base_url);
-        let strategies = self
-            .authenticated_request(self.http.get(strategies_url))
-            .query(&[
-                ("select", "id,user_id"),
-                ("is_enabled", "eq.true"),
-                ("strategy_code", "eq.FMT_TOKYO_M15"),
-                ("limit", "1000"),
-            ])
-            .send()
-            .await
-            .map_err(|error| error.to_string())?
-            .error_for_status()
-            .map_err(|error| error.to_string())?
-            .json::<Vec<ActiveStrategy>>()
-            .await
-            .map_err(|error| error.to_string())?;
+        let mut strategies = Vec::new();
+        let mut offset = 0_usize;
+        loop {
+            let range = format!("{}-{}", offset, offset + 999);
+            let page = self
+                .authenticated_request(self.http.get(&strategies_url))
+                .query(&[
+                    ("select", "id,user_id"),
+                    ("is_enabled", "eq.true"),
+                    ("strategy_code", "eq.FMT_TOKYO_M15"),
+                    ("source_symbol", "eq.BTCUSDT"),
+                    ("limit", "1000"),
+                ])
+                .header("Range", range)
+                .send()
+                .await
+                .map_err(|error| error.to_string())?
+                .error_for_status()
+                .map_err(|error| error.to_string())?
+                .json::<Vec<ActiveStrategy>>()
+                .await
+                .map_err(|error| error.to_string())?;
+            let page_len = page.len();
+            strategies.extend(page);
+            if page_len < 1000 {
+                break;
+            }
+            offset += 1000;
+        }
 
         if strategies.is_empty() {
             info!("No enabled FMT strategy instances; event not assigned to a user");
