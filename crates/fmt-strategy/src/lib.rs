@@ -83,6 +83,8 @@ pub enum StrategyError {
     InvalidCandle(&'static str),
     #[error("candles must be supplied in strictly increasing timestamp order")]
     OutOfOrderCandle,
+    #[error("missing M15 candle; backfill is required before strategy evaluation")]
+    MissingCandle,
 }
 
 /// One engine instance must be used per strategy stream/account-symbol configuration.
@@ -133,8 +135,14 @@ impl FmtEngine {
     /// Process one completed M15 candle. Call exactly once per candle.
     pub fn on_candle(&mut self, candle: Candle) -> Result<Vec<StrategyEvent>, StrategyError> {
         candle.validate()?;
-        if self.last_open_time.is_some_and(|last| candle.open_time <= last) {
-            return Err(StrategyError::OutOfOrderCandle);
+        if let Some(last) = self.last_open_time {
+            let gap_minutes = candle.open_time.signed_duration_since(last).num_minutes();
+            if gap_minutes <= 0 {
+                return Err(StrategyError::OutOfOrderCandle);
+            }
+            if gap_minutes != 15 {
+                return Err(StrategyError::MissingCandle);
+            }
         }
 
         let local = candle.open_time.with_timezone(&New_York);
@@ -296,6 +304,15 @@ mod tests {
         let second = candle("2026-01-12T22:45:00Z", 100.0, 101.0, 99.0, 100.0, 10.0);
         engine.on_candle(first).unwrap();
         assert_eq!(engine.on_candle(second), Err(StrategyError::OutOfOrderCandle));
+    }
+
+    #[test]
+    fn rejects_missing_m15_candles() {
+        let mut engine = FmtEngine::new();
+        let first = candle("2026-01-12T23:00:00Z", 100.0, 101.0, 99.0, 100.0, 10.0);
+        let next = candle("2026-01-12T23:30:00Z", 100.0, 101.0, 99.0, 100.0, 10.0);
+        engine.on_candle(first).unwrap();
+        assert_eq!(engine.on_candle(next), Err(StrategyError::MissingCandle));
     }
 
     #[test]
