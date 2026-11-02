@@ -26,24 +26,28 @@ Construir uma plataforma multiusuário em que cada usuário conecta sua própria
 
 ### Adaptador GMX
 
-O SDK oficial da GMX é TypeScript. A arquitetura prevê um adaptador TypeScript isolado para integração com o SDK, enquanto regras de estratégia, risco e domínio permanecem em Rust. Não presumir que existe SDK Rust oficial.
+O SDK oficial da GMX é TypeScript. A arquitetura prevê um adaptador TypeScript isolado para integração com o SDK, enquanto regras de estratégia, risco e domínio permanecem em Rust. Para novas integrações, priorizar o SDK v2 (`@gmx-io/sdk/v2`), conforme a documentação oficial; não presumir que existe SDK Rust oficial.
 
-### Dados
+### Dados de mercado — decisão técnica
 
 - PostgreSQL/Supabase para usuários, preferências, configurações e histórico.
 - WebSockets para atualizações de mercado e estado operacional.
-- Dados de preço, candles e volume devem ser identificados por fonte e mercado.
-- O preço/volume usados pelo indicador precisam ser compatíveis com a fonte de execução escolhida.
+- O endpoint oficial de candles da Oracle API GMX oferece intervalos incluindo 15m, mas seu formato documentado é OHLC: timestamp, open, high, low e close. Não inclui volume.
+- O método `GmxApiSdk.fetchOhlcv()` do SDK v2 também documenta candles com timestamp e OHLC, sem campo de volume.
+- Como a VWAP original do Pine usa `hlc3 * volume`, não calcular nem rotular como VWAP fiel usando candles GMX sem volume.
+- Para preservar a estratégia, usar uma única fonte OHLCV identificada para todos os cálculos do indicador (candles, níveis e VWAP), preferencialmente a mesma fonte/símbolo do gráfico TradingView de referência.
+- Consultar em paralelo os preços/oráculos e as condições do mercado GMX para validar se a ordem pode ser executada. Divergências entre fonte do sinal e preço GMX devem ser medidas, limitadas e registradas; nunca escondidas.
+- A fonte OHLCV exata ainda precisa ser confirmada pelo usuário, informando o ticker/provedor usado no TradingView.
 
 ## Fluxo de sinal e execução
 
-1. Coletar e validar dados de mercado.
-2. Atualizar candles e VWAP ancorada.
+1. Coletar e validar candles M15 OHLCV da fonte de referência aprovada.
+2. Atualizar faixa pré-sessão e VWAP ancorada.
 3. Avaliar as regras FMT sem alterar a especificação.
 4. Gerar sinal tipado e rastreável.
-5. Consultar posições e ordens reais do usuário.
+5. Consultar preço/oráculo, mercado ativo, capacidade e posições reais GMX do usuário.
 6. Aplicar limites individuais no motor de risco.
-7. Validar mercado, tamanho, margem, slippage e permissões.
+7. Validar mercado, tamanho, margem, slippage, divergência de preço e permissões.
 8. Solicitar execução pelo adaptador GMX.
 9. Confirmar o resultado on-chain.
 10. Atualizar estado, histórico e painel.
