@@ -18,16 +18,16 @@ This file separates code that has been authored from code that has actually been
 
 ## Checks passed in CI
 
-- `cargo fmt`, `cargo test`, and `cargo clippy` passed in GitHub Actions after checking out current branch commit `0d19e39` (including the paper ledger worker).
-- GMX adapter `npm run typecheck` passed in GitHub Actions on the same validation run.
-- Dashboard TypeScript typecheck and Next.js production build passed in GitHub Actions after checking out commit `0d19e39`, including the EIP-1193 wallet migration and paper ledger UI.
-- Docker Compose configuration, all three container image builds (Rust API/worker, GMX adapter, Next.js dashboard), and application of the Supabase migration against a temporary PostgreSQL 16 instance passed in GitHub Actions.
+- `cargo fmt`, `cargo test`, and `cargo clippy` passed in GitHub Actions on commit `0d19e39`; the latest CI run for the current branch is rechecking all jobs.
+- GMX adapter `npm run typecheck` passed in GitHub Actions on commit `0d19e39`.
+- Dashboard TypeScript typecheck and Next.js production build passed in GitHub Actions on commit `0d19e39`, including the EIP-1193 wallet migration and paper ledger UI.
+- Docker Compose configuration, all three container image builds (Rust API/worker, GMX adapter, Next.js dashboard), and application of the Supabase migration against a temporary PostgreSQL 16 instance passed in GitHub Actions on prior commits.
 ## Remaining unverified
 
 - The Supabase migration has not been applied to a live Supabase project.
 - The Bybit feed has not been observed running against a configured environment.
 - The GMX SDK reads have not been verified against a connected Arbitrum wallet.
-- The literal Pine Script source has not yet been located in the conversation or Library; exact parity remains blocked until the user supplies it.
+- Daniel supplied the complete Pine Script v5 source; it is archived at `docs/reference/fmt-tokyo-original.pine`. The statement order has been reconciled in the Rust engine and spec; numeric candle-by-candle parity still requires TradingView-exported OHLCV reference data.
 - No TradingView/Pine parity run has been completed using exported reference candles.
 - The paper ledger has been implemented but has not yet been validated end-to-end; no paper-trading or backtest report exists.
 - Latest lockfile audit after safe overrides: dashboard reported 0 vulnerabilities; GMX adapter retained 9 low-severity transitive advisories in the ethers/elliptic dependency path. No high or moderate advisories remained.
