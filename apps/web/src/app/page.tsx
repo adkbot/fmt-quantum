@@ -7,6 +7,7 @@ import { WalletVerificationPanel } from "@/components/wallet-verification-panel"
 import { GmxAccountPanel } from "@/components/gmx-account-panel";
 import { StrategyControlPanel } from "@/components/strategy-control-panel";
 import { StrategyEventsPanel } from "@/components/strategy-events-panel";
+import { PaperTradingPanel } from "@/components/paper-trading-panel";
 import { BtcMarketChart } from "@/components/btc-market-chart";
 
 function shortAddress(address?: string) {
@@ -131,6 +132,7 @@ export default function HomePage() {
 
       <GmxAccountPanel />
       <StrategyEventsPanel />
+      <PaperTradingPanel />
 
       <footer>
         <span>FMT QUANTUM · BUILD 0.1.0</span>
