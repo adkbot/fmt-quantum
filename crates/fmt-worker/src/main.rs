@@ -352,7 +352,7 @@ async fn main() {
                                         events: events.clone(),
                                     }).is_err()
                                 {
-                                    *engine = engine_before;
+                                    engine = engine_before;
                                     let error = "market persistence queue is full or closed; candle will be replayed".to_string();
                                     callback_error = Some(error.clone());
                                     return Err(error);
