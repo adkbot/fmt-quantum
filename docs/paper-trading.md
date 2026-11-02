@@ -7,8 +7,8 @@ The paper ledger is a per-user simulation of the FMT signal stream. It records o
 - Entry and exit reference prices come from confirmed Bybit BTCUSDT linear perpetual M15 candles.
 - Long and short gross PnL is stored as integer basis points.
 - A user who enables or re-enables a strategy after the current New York session starts joins from the next session. This avoids an exit being delivered without the corresponding entry.
-- REST backfill reconstructs the paper ledger after worker startup or reconnect. Replayed signal events include `origin=REST_BACKFILL` and `execution_eligible=false`.
-- Live WebSocket signal events include `origin=LIVE_WEBSOCKET` and `execution_eligible=true`. This flag is metadata only; no execution consumer is implemented.
+- REST backfill reconstructs the paper ledger after worker startup or reconnect. Replayed signal events include `origin=REST_BACKFILL` and `is_live_signal=false`.
+- Live WebSocket signal events include `origin=LIVE_WEBSOCKET` and `is_live_signal=true`. **Every strategy event remains `execution_eligible=false`**; a fresh signal is not an order authorization. No execution consumer is implemented.
 
 ## PnL formula
 
