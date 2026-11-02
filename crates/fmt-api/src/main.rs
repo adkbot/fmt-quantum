@@ -37,6 +37,13 @@ struct RiskConfigRecord {
     config: RiskConfig,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+struct WalletConnectionRecord {
+    wallet_address: String,
+    chain_id: u64,
+    verified_at: String,
+}
+
 #[derive(Debug, Deserialize)]
 struct WalletChallengeRecord {
     id: String,
@@ -216,6 +223,31 @@ async fn put_risk_config(
         .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
 
     Ok(Json(config))
+}
+
+async fn get_wallet_connections(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<Vec<WalletConnectionRecord>>, StatusCode> {
+    let user = authenticate_user(&state, &headers).await?;
+    let url = format!("{}/rest/v1/wallet_connections", state.supabase_url.trim_end_matches('/'));
+    let user_filter = format!("eq.{}", user.id);
+    let rows = admin_request(&state, state.http.get(url))
+        .query(&[
+            ("select", "wallet_address,chain_id,verified_at"),
+            ("user_id", user_filter.as_str()),
+            ("order", "verified_at.desc"),
+            ("limit", "100"),
+        ])
+        .send()
+        .await
+        .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?
+        .error_for_status()
+        .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?
+        .json::<Vec<WalletConnectionRecord>>()
+        .await
+        .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
+    Ok(Json(rows))
 }
 
 async fn create_wallet_challenge(
@@ -413,6 +445,7 @@ async fn main() {
             "/v1/risk-config",
             get(get_risk_config).put(put_risk_config),
         )
+        .route("/v1/wallets", get(get_wallet_connections))
         .route("/v1/wallet/challenge", post(create_wallet_challenge))
         .route("/v1/wallet/verify", post(verify_wallet_signature))
         .with_state(state)
