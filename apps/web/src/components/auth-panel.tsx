@@ -8,16 +8,42 @@ export function AuthPanel() {
   const [signedInEmail, setSignedInEmail] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [apiStatus, setApiStatus] = useState("API ainda não verificada");
 
   useEffect(() => {
     if (!supabase) return;
 
+    async function verifyApiSession(accessToken: string) {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+      if (!apiUrl) {
+        setApiStatus("Configure NEXT_PUBLIC_API_URL para validar a sessão na API.");
+        return;
+      }
+      try {
+        const response = await fetch(`${apiUrl.replace(/\\/$/, "")}/v1/me`, {
+          headers: { Authorization: `Bearer ${accessToken}` }
+        });
+        if (!response.ok) {
+          setApiStatus(`API ainda não autenticou esta sessão (HTTP ${response.status}).`);
+          return;
+        }
+        const identity = (await response.json()) as { user_id: string };
+        setApiStatus(`API autenticada · usuário ${identity.user_id.slice(0, 8)}…`);
+      } catch {
+        setApiStatus("API indisponível ou ainda não iniciada.");
+      }
+    }
+
     void supabase.auth.getSession().then(({ data }) => {
-      setSignedInEmail(data.session?.user.email ?? null);
+      const session = data.session;
+      setSignedInEmail(session?.user.email ?? null);
+      if (session) void verifyApiSession(session.access_token);
     });
 
     const { data } = supabase.auth.onAuthStateChange((_event, session) => {
       setSignedInEmail(session?.user.email ?? null);
+      if (session) void verifyApiSession(session.access_token);
+      else setApiStatus("Faça login para validar a sessão na API.");
     });
 
     return () => data.subscription.unsubscribe();
@@ -80,6 +106,7 @@ export function AuthPanel() {
           ) : null}
         </>
       )}
+      <p className="api-status">{apiStatus}</p>
       {message ? <p className="auth-message">{message}</p> : null}
     </section>
   );
