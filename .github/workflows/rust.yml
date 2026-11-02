@@ -1,4 +1,4 @@
-name: Rust CI
+name: Project CI
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [clone01]
 
 jobs:
-  check:
+  rust:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,3 +20,18 @@ jobs:
         run: cargo test --workspace --all-targets
       - name: Run Clippy
         run: cargo clippy --workspace --all-targets -- -D warnings
+
+  gmx-adapter:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/gmx-adapter
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-package-lock
+      - name: TypeScript typecheck
+        run: npm run typecheck
