@@ -144,3 +144,6 @@ footer { display: flex; justify-content: space-between; gap: 16px; color: #66758
   .market-chart { padding: 14px; }
   .chart-container { height: 280px; }
 }
+
+.wallet-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.wallet-actions .button { margin-top: 0; }
