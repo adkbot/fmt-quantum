@@ -297,6 +297,39 @@ async fn backfill(
     Ok(())
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn overnight_signal_uses_previous_new_york_session_start() {
+        let event_time = New_York
+            .with_ymd_and_hms(2026, 1, 13, 1, 15, 0)
+            .unwrap()
+            .with_timezone(&Utc);
+        let session_start = session_start_for_event(event_time);
+        let expected = New_York
+            .with_ymd_and_hms(2026, 1, 12, 20, 0, 0)
+            .unwrap()
+            .with_timezone(&Utc);
+        assert_eq!(session_start, expected);
+    }
+
+    #[test]
+    fn summer_signal_uses_dst_aware_new_york_session_start() {
+        let event_time = New_York
+            .with_ymd_and_hms(2026, 7, 13, 21, 15, 0)
+            .unwrap()
+            .with_timezone(&Utc);
+        let session_start = session_start_for_event(event_time);
+        let expected = New_York
+            .with_ymd_and_hms(2026, 7, 13, 20, 0, 0)
+            .unwrap()
+            .with_timezone(&Utc);
+        assert_eq!(session_start, expected);
+    }
+}
+
 #[tokio::main]
 async fn main() {
     let _ = dotenvy::dotenv();
