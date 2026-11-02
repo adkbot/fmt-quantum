@@ -10,6 +10,25 @@ create table if not exists public.profiles (
   updated_at timestamptz not null default now()
 );
 
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $
+begin
+  insert into public.profiles (id, display_name)
+  values (new.id, coalesce(new.raw_user_meta_data ->> 'name', new.raw_user_meta_data ->> 'full_name'))
+  on conflict (id) do nothing;
+  return new;
+end;
+$;
+
+drop trigger if exists on_auth_user_created_fmt on auth.users;
+create trigger on_auth_user_created_fmt
+  after insert on auth.users
+  for each row execute procedure public.handle_new_user();
+
 create table if not exists public.wallet_connections (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -129,11 +148,6 @@ create policy "wallet owner can unlink" on public.wallet_connections
 
 create policy "risk owner can read" on public.risk_configs
   for select to authenticated using (user_id = auth.uid());
-create policy "risk owner can insert" on public.risk_configs
-  for insert to authenticated with check (user_id = auth.uid());
-create policy "risk owner can update" on public.risk_configs
-  for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
-
 create policy "strategy owner can read" on public.strategy_instances
   for select to authenticated using (user_id = auth.uid());
 create policy "strategy owner can insert" on public.strategy_instances
