@@ -106,6 +106,17 @@ jobs:
         run: cp .env.example .env
       - name: Validate Compose configuration
         run: docker compose config --quiet
+      - name: Validate Supabase migration on PostgreSQL
+        run: |
+          docker run --name fmt-migration-db -e POSTGRES_PASSWORD=postgres -d postgres:16 -c wal_level=logical
+          for attempt in $(seq 1 30); do
+            if docker exec fmt-migration-db pg_isready -U postgres >/dev/null 2>&1; then break; fi
+            sleep 2
+          done
+          docker exec fmt-migration-db psql -U postgres -v ON_ERROR_STOP=1 -c "CREATE ROLE anon NOLOGIN; CREATE ROLE authenticated NOLOGIN; CREATE ROLE service_role NOLOGIN BYPASSRLS; CREATE SCHEMA auth; CREATE TABLE auth.users (id uuid PRIMARY KEY, email text, raw_user_meta_data jsonb); CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS 'SELECT NULL::uuid'; CREATE PUBLICATION supabase_realtime;"
+          docker cp supabase/migrations/202611020001_initial_multiuser_schema.sql fmt-migration-db:/tmp/migration.sql
+          docker exec fmt-migration-db psql -U postgres -v ON_ERROR_STOP=1 -f /tmp/migration.sql
+          docker rm -f fmt-migration-db
       - name: Build Rust API and worker image
         run: docker build -f Dockerfile.rust -t fmt-quantum-rust .
       - name: Build GMX read-only adapter image
