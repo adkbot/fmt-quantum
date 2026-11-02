@@ -10,8 +10,6 @@ concurrency:
 on:
   push:
     branches: [clone01]
-  pull_request:
-    branches: [clone01]
 
 jobs:
   lockfiles:
@@ -75,6 +73,8 @@ jobs:
         working-directory: services/gmx-adapter
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: clone01
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -99,6 +99,8 @@ jobs:
         working-directory: apps/web
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: clone01
       - uses: actions/setup-node@v4
         with:
           node-version: 22
