@@ -95,6 +95,26 @@ jobs:
           path: services/gmx-adapter/package-lock.json
           if-no-files-found: warn
 
+  docker:
+    needs: lockfiles
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: clone01
+      - name: Validate Compose configuration
+        run: docker compose config --quiet
+      - name: Build Rust API and worker image
+        run: docker build -f Dockerfile.rust -t fmt-quantum-rust .
+      - name: Build GMX read-only adapter image
+        run: docker build -f services/gmx-adapter/Dockerfile -t fmt-quantum-gmx-adapter ./services/gmx-adapter
+      - name: Build Next.js dashboard image
+        run: |
+          docker build -f apps/web/Dockerfile -t fmt-quantum-web ./apps/web \
+            --build-arg NEXT_PUBLIC_SUPABASE_URL=https://example.supabase.co \
+            --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY=public-placeholder \
+            --build-arg NEXT_PUBLIC_API_URL=http://localhost:8080
+
   web:
     needs: lockfiles
     runs-on: ubuntu-latest
