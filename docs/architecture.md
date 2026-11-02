@@ -79,3 +79,16 @@ O limite de produto planejado é de até 8 posições simultâneas por usuário,
 5. Testnet, quando aplicável à integração.
 6. Revisão de segurança e testes de recuperação.
 7. Liberação gradual, somente após aprovação explícita.
+
+
+## Implementação já iniciada no repositório
+
+- `crates/fmt-strategy`: motor inicial de sessão, faixa pré-sessão, VWAP e eventos FMT. Ainda requer paridade formal com o Pine original.
+- `crates/bybit-feed`: cliente REST público Bybit V5 para validar BTCUSDT LinearPerpetual/Trading e obter candles M15; WebSocket, backfill e detecção de lacunas ainda pendentes.
+- `crates/fmt-risk`: validação inicial por usuário para limite de até 8 posições, exposição, alavancagem, colateral, mercado verificado e divergência de preço. Não emite token de autorização nem executa ordens.
+- `services/gmx-adapter`: adaptador TypeScript somente leitura usando `GmxApiSdk` v2 para mercados, posições, ordens, tickers e saldos. Escrita/execução está intencionalmente desabilitada.
+- `supabase/migrations`: esquema inicial multiusuário com RLS. Wallets, eventos, snapshots e execuções só podem ser escritos por serviços confiáveis; clientes não podem alterar diretamente as configurações de risco.
+
+## Situação atual
+
+Esta é uma base de implementação, não um produto pronto. O ambiente de trabalho desta sessão não tem Rust/Cargo instalado, então os testes Rust ainda não foram executados localmente. O workflow de CI foi adicionado para executar formatação, testes e Clippy no GitHub Actions. Não há integração de execução GMX, frontend funcional, autenticação conectada, WebSocket de mercado, paper trading ou implantação concluída. Nenhuma ordem real foi enviada.
