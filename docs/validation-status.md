@@ -19,6 +19,7 @@ This file separates code that has been authored from code that has actually been
 - GMX adapter `npm run typecheck` has not been run.
 - Dashboard `npm run typecheck` and `npm run build` have not been run.
 - Docker images and `docker compose up --build` have not been built.
+- Cargo/npm lockfiles have not yet been generated and committed, so dependency versions are not fully reproducible.
 - The Supabase migration has not been applied to a live Supabase project.
 - The Bybit feed has not been observed running against a configured environment.
 - The GMX SDK reads have not been verified against a connected Arbitrum wallet.
