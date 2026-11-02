@@ -9,6 +9,7 @@ use reqwest::{Client, Url};
 use serde::Deserialize;
 use serde_json::Value;
 use tokio::net::TcpStream;
+use std::time::Duration as StdDuration;
 use tokio::time::{interval_at, Duration as TokioDuration, Instant};
 use tokio_tungstenite::{connect_async, tungstenite::Message, MaybeTlsStream, WebSocketStream};
 use thiserror::Error;
@@ -68,7 +69,10 @@ impl BybitClient {
     pub fn new(environment: Environment) -> Result<Self, BybitError> {
         let base_url = Url::parse(environment.base_url())
             .map_err(|e| BybitError::InvalidResponse(e.to_string()))?;
-        Ok(Self { http: Client::builder().build()?, base_url })
+        Ok(Self {
+            http: Client::builder().timeout(StdDuration::from_secs(15)).build()?,
+            base_url,
+        })
     }
 
     /// Confirm that BTCUSDT is currently a tradable linear perpetual before
