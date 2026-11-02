@@ -1,4 +1,7 @@
 import Fastify, { type FastifyReply } from "fastify";
+import dotenv from "dotenv";
+
+dotenv.config({ path: process.env.DOTENV_CONFIG_PATH ?? "../../.env" });
 import { GmxReadAdapter, type WalletAddress } from "./client.js";
 
 const app = Fastify({ logger: true });
