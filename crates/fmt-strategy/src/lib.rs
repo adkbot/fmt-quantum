@@ -11,7 +11,7 @@ use thiserror::Error;
 
 const MINUTES_PER_CANDLE: u32 = 15;
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct Candle {
     pub open_time: DateTime<Utc>,
     pub open: f64,
@@ -136,7 +136,7 @@ impl FmtEngine {
     pub fn on_candle(&mut self, candle: Candle) -> Result<Vec<StrategyEvent>, StrategyError> {
         candle.validate()?;
         if let Some(last) = self.last_open_time.as_ref() {
-            let gap_minutes = candle.open_time.signed_duration_since(last.clone()).num_minutes();
+            let gap_minutes = candle.open_time.signed_duration_since(*last).num_minutes();
             if gap_minutes <= 0 {
                 return Err(StrategyError::OutOfOrderCandle);
             }
@@ -173,7 +173,7 @@ impl FmtEngine {
                 self.pre_session_sequence_valid = false;
             }
             self.pre_session_bars = self.pre_session_bars.saturating_add(1);
-            self.pre_session_last_time = Some(candle.open_time.clone());
+            self.pre_session_last_time = Some(candle.open_time);
             if self.pre_session_bars == 8 {
                 // The first bar must be 18:00 and all eight M15 bars must be contiguous.
                 self.pre_session_complete = self.pre_session_sequence_valid
