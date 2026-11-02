@@ -352,18 +352,21 @@ mod tests {
         }
         engine.on_candle(local_candle(20, 0, 102.0, 99.0, 101.0)).unwrap();
 
-        let overnight = New_York
-            .with_ymd_and_hms(2026, 1, 13, 1, 0, 0)
+        let session_open = New_York
+            .with_ymd_and_hms(2026, 1, 12, 20, 0, 0)
             .unwrap()
             .with_timezone(&Utc);
-        engine.on_candle(Candle {
-            open_time: overnight,
-            open: 101.0,
-            high: 102.0,
-            low: 100.0,
-            close: 101.0,
-            volume: 10.0,
-        }).unwrap();
+        for index in 1..=20 {
+            let open_time = session_open + chrono::Duration::minutes(index * 15);
+            engine.on_candle(Candle {
+                open_time,
+                open: 100.0,
+                high: 100.5,
+                low: 99.5,
+                close: 100.0,
+                volume: 10.0,
+            }).unwrap();
+        }
 
         assert_eq!(engine.active_session, Some(NaiveDate::from_ymd_opt(2026, 1, 12).unwrap()));
     }
