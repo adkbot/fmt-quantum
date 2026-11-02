@@ -36,7 +36,8 @@ async fn backfill(
 ) -> Result<(), String> {
     let end = Utc::now();
     let start = last_processed
-        .map(|last| last + Duration::minutes(15))
+        .as_ref()
+        .map(|last| *last + Duration::minutes(15))
         .unwrap_or_else(|| end - Duration::hours(INITIAL_LOOKBACK_HOURS));
 
     if start > end {
@@ -88,8 +89,10 @@ async fn main() {
 
     let mut backoff_seconds = 1_u64;
     loop {
+        let mut connected = false;
         match BybitKlineStream::connect_after(environment, last_processed).await {
             Ok(stream) => {
+                connected = true;
                 info!(last = ?last_processed, "Connected to Bybit confirmed M15 WebSocket");
                 let mut callback_error: Option<String> = None;
                 let result = stream
@@ -125,7 +128,7 @@ async fn main() {
         // engine rejects gaps, so it cannot silently trade on an incomplete series.
         if let Err(error) = backfill(&client, &mut engine, &mut last_processed, false).await {
             error!(%error, "Bybit REST backfill failed; keeping worker fail-closed");
-        } else {
+        } else if connected {
             backoff_seconds = 1;
         }
 
