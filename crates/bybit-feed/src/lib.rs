@@ -3,9 +3,14 @@
 //! treating the currently forming candle as a confirmed signal.
 
 use chrono::{DateTime, Duration, Utc};
+use futures_util::{SinkExt, StreamExt};
 use fmt_strategy::Candle;
 use reqwest::{Client, Url};
 use serde::Deserialize;
+use serde_json::Value;
+use tokio::net::TcpStream;
+use tokio::time::{interval_at, Duration as TokioDuration, Instant};
+use tokio_tungstenite::{connect_async, tungstenite::Message, MaybeTlsStream, WebSocketStream};
 use thiserror::Error;
 
 const PRODUCTION_BASE: &str = "https://api.bybit.com";
@@ -18,6 +23,13 @@ pub enum Environment {
 }
 
 impl Environment {
+    fn websocket_url(self) -> &'static str {
+        match self {
+            Self::Production => "wss://stream.bybit.com/v5/public/linear",
+            Self::Testnet => "wss://stream-testnet.bybit.com/v5/public/linear",
+        }
+    }
+
     fn base_url(self) -> &'static str {
         match self {
             Self::Production => PRODUCTION_BASE,
@@ -38,6 +50,10 @@ pub enum BybitError {
     InvalidTimestamp(i64),
     #[error("invalid candle numeric field: {0}")]
     InvalidNumber(String),
+    #[error("Bybit WebSocket error: {0}")]
+    WebSocket(String),
+    #[error("Bybit WebSocket disconnected")]
+    StreamClosed,
     #[error("unexpected instrument: expected active BTCUSDT LinearPerpetual")]
     InstrumentNotTradable,
 }
@@ -211,4 +227,119 @@ mod tests {
             Err(BybitError::InvalidResponse(_))
         ));
     }
+}
+
+
+/// Public M15 kline stream. Only candles with Bybit's `confirm=true` flag
+/// are passed to the strategy. On disconnect, the caller must reconnect and
+/// backfill through REST before resuming signal evaluation.
+pub struct BybitKlineStream {
+    socket: WebSocketStream<MaybeTlsStream<TcpStream>>,
+    last_open_time: Option<DateTime<Utc>>,
+}
+
+impl BybitKlineStream {
+    pub async fn connect(environment: Environment) -> Result<Self, BybitError> {
+        let (mut socket, _) = connect_async(environment.websocket_url())
+            .await
+            .map_err(|e| BybitError::WebSocket(e.to_string()))?;
+        let subscription = serde_json::json!({
+            "op": "subscribe",
+            "args": ["kline.15.BTCUSDT"]
+        });
+        socket
+            .send(Message::Text(subscription.to_string().into()))
+            .await
+            .map_err(|e| BybitError::WebSocket(e.to_string()))?;
+        Ok(Self { socket, last_open_time: None })
+    }
+
+    /// Runs until the connection closes or an invalid/out-of-order confirmed
+    /// candle is received. The owner should reconnect with backoff and REST
+    /// backfill; this method never silently resumes after a gap.
+    pub async fn run_until_disconnect<F>(self, mut on_closed_candle: F) -> Result<(), BybitError>
+    where
+        F: FnMut(Candle) + Send,
+    {
+        let (mut writer, mut reader) = self.socket.split();
+        let mut last_open_time = self.last_open_time;
+        let mut heartbeat = interval_at(
+            Instant::now() + TokioDuration::from_secs(20),
+            TokioDuration::from_secs(20),
+        );
+
+        loop {
+            tokio::select! {
+                _ = heartbeat.tick() => {
+                    let ping = serde_json::json!({"op": "ping"}).to_string();
+                    writer.send(Message::Text(ping.into())).await
+                        .map_err(|e| BybitError::WebSocket(e.to_string()))?;
+                }
+                incoming = reader.next() => {
+                    let message = incoming.ok_or(BybitError::StreamClosed)?
+                        .map_err(|e| BybitError::WebSocket(e.to_string()))?;
+                    match message {
+                        Message::Text(text) => {
+                            let payload: Value = serde_json::from_str(text.as_ref())
+                                .map_err(|e| BybitError::WebSocket(e.to_string()))?;
+                            let Some(rows) = payload.get("data").and_then(Value::as_array) else {
+                                continue;
+                            };
+                            for row in rows {
+                                if row.get("confirm").and_then(Value::as_bool) != Some(true) {
+                                    continue;
+                                }
+                                if row.get("interval").and_then(Value::as_str) != Some("15") {
+                                    continue;
+                                }
+                                let candle = parse_ws_kline(row)?;
+                                if let Some(last) = last_open_time {
+                                    if candle.open_time < last {
+                                        return Err(BybitError::InvalidResponse(
+                                            "out-of-order WebSocket candle; REST backfill required".into()
+                                        ));
+                                    }
+                                    if candle.open_time == last {
+                                        continue;
+                                    }
+                                }
+                                candle.validate()
+                                    .map_err(|e| BybitError::InvalidResponse(e.to_string()))?;
+                                last_open_time = Some(candle.open_time);
+                                on_closed_candle(candle);
+                            }
+                        }
+                        Message::Ping(payload) => {
+                            writer.send(Message::Pong(payload)).await
+                                .map_err(|e| BybitError::WebSocket(e.to_string()))?;
+                        }
+                        Message::Close(_) => return Err(BybitError::StreamClosed),
+                        _ => {}
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn parse_ws_kline(row: &Value) -> Result<Candle, BybitError> {
+    let timestamp = row.get("start").and_then(Value::as_i64)
+        .ok_or_else(|| BybitError::InvalidNumber("start".into()))?;
+    let open_time = DateTime::from_timestamp_millis(timestamp)
+        .ok_or(BybitError::InvalidTimestamp(timestamp))?;
+    let number = |field: &str| -> Result<f64, BybitError> {
+        row.get(field)
+            .and_then(Value::as_str)
+            .ok_or_else(|| BybitError::InvalidNumber(field.into()))?
+            .parse::<f64>()
+            .map_err(|_| BybitError::InvalidNumber(field.into()))
+    };
+    Ok(Candle {
+        open_time,
+        open: number("open")?,
+        high: number("high")?,
+        low: number("low")?,
+        close: number("close")?,
+        volume: number("volume")?,
+    })
 }
