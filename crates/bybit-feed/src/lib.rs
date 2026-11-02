@@ -235,6 +235,23 @@ mod tests {
             Err(BybitError::InvalidResponse(_))
         ));
     }
+
+    #[test]
+    fn parses_confirmed_websocket_kline_payload() {
+        let row = serde_json::json!({
+            "start": 1768262400000_i64,
+            "interval": "15",
+            "open": "95000.0",
+            "high": "95100.0",
+            "low": "94900.0",
+            "close": "95050.0",
+            "volume": "12.345",
+            "confirm": true
+        });
+        let candle = parse_ws_kline(&row).unwrap();
+        assert_eq!(candle.close, 95050.0);
+        assert_eq!(candle.volume, 12.345);
+    }
 }
 
 
