@@ -42,6 +42,34 @@ export function WalletVerificationPanel() {
     setVerifiedAddress(null);
   }, [address, chainId]);
 
+  useEffect(() => {
+    if (!accessToken || !address || chainId !== arbitrum.id) return;
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    if (!apiUrl) return;
+
+    let cancelled = false;
+    async function loadVerifiedWallets() {
+      try {
+        const response = await fetch(`${apiUrl.replace(/\\/$/, "")}/v1/wallets`, {
+          headers: { Authorization: `Bearer ${accessToken}` }
+        });
+        if (!response.ok) return;
+        const wallets = (await response.json()) as WalletConnection[];
+        const match = wallets.find((wallet) =>
+          wallet.chain_id === arbitrum.id &&
+          wallet.wallet_address.toLowerCase() === address.toLowerCase()
+        );
+        if (!cancelled) setVerifiedAddress(match?.wallet_address ?? null);
+      } catch {
+        // A failed read does not imply wallet verification.
+      }
+    }
+    void loadVerifiedWallets();
+    return () => {
+      cancelled = true;
+    };
+  }, [accessToken, address, chainId]);
+
   async function verifyWallet() {
     if (!address || !isConnected) {
       setMessage("Conecte primeiro sua MetaMask.");
