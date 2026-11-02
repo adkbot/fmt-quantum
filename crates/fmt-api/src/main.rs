@@ -9,7 +9,7 @@ use axum::{
 };
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
-use std::{env, net::SocketAddr};
+use std::{env, net::SocketAddr, str::FromStr};
 use tower_http::cors::{AllowOrigin, CorsLayer};
 
 #[derive(Clone)]
