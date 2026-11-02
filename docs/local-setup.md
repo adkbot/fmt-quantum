@@ -23,6 +23,14 @@ Copy the project URL, anon/public key, and service-role key from Supabase. The s
 
 At the repository root:
 
+PowerShell (Windows 10):
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Bash:
+
 ```bash
 cp .env.example .env
 ```
@@ -34,7 +42,18 @@ In `.env`, set:
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `GMX_ADAPTER_INTERNAL_KEY`
 
-Generate an internal key, for example:
+Generate an internal key.
+
+PowerShell:
+
+```powershell
+$bytes = New-Object byte[] 32
+[Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytes)
+$internalKey = [BitConverter]::ToString($bytes).Replace("-", "").ToLower()
+$internalKey
+```
+
+Bash:
 
 ```bash
 openssl rand -hex 32
@@ -44,11 +63,19 @@ Use the same `GMX_ADAPTER_INTERNAL_KEY` value for the Rust API and TypeScript ad
 
 For the browser app:
 
+PowerShell:
+
+```powershell
+Copy-Item apps/web/.env.example apps/web/.env.local
+```
+
+Bash:
+
 ```bash
 cp apps/web/.env.example apps/web/.env.local
 ```
 
-Set `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and `NEXT_PUBLIC_API_URL=http://localhost:8080` in `apps/web/.env.local`.
+Set `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and `NEXT_PUBLIC_API_URL=http://localhost:8080` in `apps/web/.env.local`. The Rust API and worker load the root `.env`; the GMX adapter also loads it when started from `services/gmx-adapter`.
 
 ## 3. Start the GMX read-only adapter
 
