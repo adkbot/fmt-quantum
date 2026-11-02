@@ -23,6 +23,20 @@ export function GmxAccountPanel() {
     return () => data.subscription.unsubscribe();
   }, []);
 
+  useEffect(() => {
+    setSnapshot(null);
+    setMessage("Conecte e verifique uma carteira Arbitrum para consultar a conta GMX.");
+  }, [accessToken, address, chainId]);
+
+  useEffect(() => {
+    function clearWalletSnapshot() {
+      setSnapshot(null);
+      setMessage("Carteira desvinculada. Verifique uma carteira para consultar novamente.");
+    }
+    window.addEventListener("fmt-wallet-unlinked", clearWalletSnapshot);
+    return () => window.removeEventListener("fmt-wallet-unlinked", clearWalletSnapshot);
+  }, []);
+
   async function loadAccount() {
     if (!isConnected || !address || chainId !== arbitrum.id || !accessToken) return;
     const apiUrl = process.env.NEXT_PUBLIC_API_URL;
