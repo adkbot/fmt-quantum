@@ -70,6 +70,31 @@ export function WalletVerificationPanel() {
     };
   }, [accessToken, address, chainId]);
 
+  async function unlinkWallet() {
+    if (!verifiedAddress || !accessToken) return;
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    if (!apiUrl) {
+      setMessage("API não configurada.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const url = new URL(`${apiUrl.replace(/\\/$/, "")}/v1/wallets`);
+      url.searchParams.set("wallet_address", verifiedAddress);
+      const response = await fetch(url, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      if (!response.ok) throw new Error(`Não foi possível desvincular a carteira (HTTP ${response.status}).`);
+      setVerifiedAddress(null);
+      setMessage("Carteira desvinculada da conta. Isso não revoga permissões on-chain externas.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Falha ao desvincular a carteira.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function verifyWallet() {
     if (!address || !isConnected) {
       setMessage("Conecte primeiro sua MetaMask.");
@@ -151,13 +176,20 @@ export function WalletVerificationPanel() {
         A carteira assina um desafio EIP-191 de uso único, válido por 5 minutos. A assinatura comprova propriedade; não aprova tokens, não envia transação e não autoriza negociações ou saques.
       </p>
       {address ? <p className="wallet-full">{address}</p> : null}
-      <button
-        className="button primary"
-        onClick={verifyWallet}
-        disabled={!isConnected || !accessToken || busy || isSigning || chainId !== arbitrum.id}
-      >
-        {busy || isSigning ? "VERIFICANDO..." : "VERIFICAR CARTEIRA"}
-      </button>
+      <div className="wallet-actions">
+        <button
+          className="button primary"
+          onClick={verifyWallet}
+          disabled={!isConnected || !accessToken || busy || isSigning || chainId !== arbitrum.id}
+        >
+          {busy || isSigning ? "PROCESSANDO..." : "VERIFICAR CARTEIRA"}
+        </button>
+        {verifiedAddress ? (
+          <button className="button secondary" onClick={unlinkWallet} disabled={busy || isSigning}>
+            DESVINCULAR
+          </button>
+        ) : null}
+      </div>
       <p className="api-status">{message}</p>
     </section>
   );
