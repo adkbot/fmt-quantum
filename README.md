@@ -34,7 +34,8 @@ fmt-quantum/
 │   ├── fmt-strategy/        # Motor inicial FMT M15
 │   ├── bybit-feed/          # Feed REST Bybit V5 BTCUSDT linear
 │   ├── fmt-risk/            # Limites e validação por usuário
-│   └── fmt-api/             # API Rust com validação de JWT Supabase
+│   ├── fmt-api/             # API Rust com validação de JWT Supabase
+│   └── fmt-worker/          # Backfill REST + WebSocket confirmado + motor FMT
 ├── services/
 │   └── gmx-adapter/         # GMX SDK v2, somente leitura nesta fase
 ├── supabase/
