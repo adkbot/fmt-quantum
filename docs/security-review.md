@@ -18,13 +18,15 @@ This is an implementation checklist, not an independent audit or production appr
 - GMX adapter HTTP routes are read-only, loopback-bound by default, and protected by a server-side internal API key.
 - The API proxies GMX account reads only for wallet addresses verified and associated with the authenticated user.
 - No private keys, seed phrases, or delegated signing keys are stored.
+- The selected future execution design is a browser-memory-only GMX subaccount signer; no signer is sent to or persisted by backend services. See `docs/delegated-execution-design.md`.
 
 ## Not yet production-ready
 
 - No independent security audit or penetration test has been completed.
-- No live GMX order execution, delegated subaccount authorization, or transaction signing service exists.
+- No live GMX order execution, delegated subaccount authorization, or transaction signing service exists. The browser-local signer design is documented but not implemented.
 - No rate limiting exists globally on the API; only active wallet-challenge creation has a per-address cap.
-- No durable event queue, dead-letter queue, or guaranteed replay exists for worker-to-Supabase event writes.
+- Worker-to-Supabase writes now use a bounded in-memory queue and retry with backoff while the process remains alive. There is still no durable queue or dead-letter queue; restart recovery replays the recent 48-hour market warm-up only.
+- One shared strategy engine currently fans out identical FMT events to enabled user instances; independent per-user engine state and execution isolation still need implementation.
 - No distributed lock or worker leader election exists.
 - No server-side idempotency permit has been implemented for future execution.
 - Risk evaluation is not yet connected to authoritative live GMX equity, collateral, positions, funding, fees, or liquidation distance.
