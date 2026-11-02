@@ -9,6 +9,7 @@ type StrategyEvent = {
   source_candle_open_time: string;
   reference_price: number | string;
   created_at: string;
+  payload?: { origin?: string; is_live_signal?: boolean; execution_eligible?: boolean };
 };
 
 function eventLabel(eventType: StrategyEvent["event_type"]) {
@@ -74,7 +75,7 @@ export function StrategyEventsPanel() {
     async function loadRecent() {
       const { data, error } = await client
         .from("strategy_events")
-        .select("id,event_type,source_candle_open_time,reference_price,created_at")
+        .select("id,event_type,source_candle_open_time,reference_price,created_at,payload")
         .eq("user_id", userId)
         .order("created_at", { ascending: false })
         .limit(30);
@@ -120,7 +121,7 @@ export function StrategyEventsPanel() {
             <div className="event-row" key={event.id}>
               <div>
                 <strong>{eventLabel(event.event_type)}</strong>
-                <span>{new Date(event.source_candle_open_time).toLocaleString("pt-BR", { timeZone: "America/New_York" })}</span>
+                <span>{new Date(event.source_candle_open_time).toLocaleString("pt-BR", { timeZone: "America/New_York" })} · {event.payload?.is_live_signal ? "AO VIVO" : "REPLAY"} · SEM AUTORIZAÇÃO</span>
               </div>
               <b>{Number(event.reference_price).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b>
             </div>
