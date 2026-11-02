@@ -49,6 +49,21 @@ enum WorkerMessage {
     CandleAndEvents { candle: Candle, events: Vec<StrategyEvent> },
 }
 
+fn gross_pnl_bps(side: &str, entry_price: f64, exit_price: f64) -> Result<i64, String> {
+    if !entry_price.is_finite() || !exit_price.is_finite() || entry_price <= 0.0 || exit_price <= 0.0 {
+        return Err("paper prices must be finite and greater than zero".into());
+    }
+    let value = match side {
+        "BUY" => ((exit_price - entry_price) / entry_price) * 10_000.0,
+        "SELL" => ((entry_price - exit_price) / entry_price) * 10_000.0,
+        _ => return Err("paper position side is invalid".into()),
+    };
+    if !value.is_finite() || value < i64::MIN as f64 || value > i64::MAX as f64 {
+        return Err("paper PnL is outside the supported range".into());
+    }
+    Ok(value.round() as i64)
+}
+
 fn session_start_for_event(event_time: DateTime<Utc>) -> DateTime<Utc> {
     let local = event_time.with_timezone(&New_York);
     let date = local.date_naive();
@@ -208,14 +223,7 @@ impl SupabaseEventStore {
             .get("entry_price")
             .and_then(|value| value.as_f64().or_else(|| value.as_str()?.parse().ok()))
             .ok_or_else(|| "paper position entry price is invalid".to_string())?;
-        let gross_pnl_bps = match side {
-            "BUY" => ((price - entry_price) / entry_price) * 10_000.0,
-            "SELL" => ((entry_price - price) / entry_price) * 10_000.0,
-            _ => return Err("paper position side is invalid".into()),
-        };
-        if !gross_pnl_bps.is_finite() || gross_pnl_bps < i64::MIN as f64 || gross_pnl_bps > i64::MAX as f64 {
-            return Err("paper PnL is outside the supported range".into());
-        }
+        let gross_pnl_bps = gross_pnl_bps(side, entry_price, price)?;
 
         let id_filter = format!("eq.{id}");
         let open_filter = "eq.OPEN";
@@ -454,6 +462,20 @@ async fn backfill(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn paper_gross_pnl_handles_long_and_short_positions() {
+        assert_eq!(gross_pnl_bps("BUY", 100.0, 101.0).unwrap(), 100);
+        assert_eq!(gross_pnl_bps("SELL", 100.0, 99.0).unwrap(), 100);
+        assert_eq!(gross_pnl_bps("BUY", 100.0, 99.0).unwrap(), -100);
+        assert_eq!(gross_pnl_bps("SELL", 100.0, 101.0).unwrap(), -100);
+    }
+
+    #[test]
+    fn paper_gross_pnl_rejects_invalid_prices() {
+        assert!(gross_pnl_bps("BUY", 0.0, 101.0).is_err());
+        assert!(gross_pnl_bps("HOLD", 100.0, 101.0).is_err());
+    }
 
     #[test]
     fn overnight_signal_uses_previous_new_york_session_start() {
