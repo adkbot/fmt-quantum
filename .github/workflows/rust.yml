@@ -27,8 +27,10 @@ jobs:
           cargo generate-lockfile
           cd services/gmx-adapter
           npm install --package-lock-only --ignore-scripts
+          npm audit fix --package-lock-only --ignore-scripts || echo "Review unresolved GMX adapter dependency advisories."
           cd ../../apps/web
           npm install --package-lock-only --ignore-scripts
+          npm audit fix --package-lock-only --ignore-scripts || echo "Review unresolved dashboard dependency advisories."
       - name: Commit lockfiles when changed
         run: |
           git config user.name "github-actions[bot]"
