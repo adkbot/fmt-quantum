@@ -25,8 +25,7 @@ struct ActiveStrategy {
 }
 
 enum WorkerMessage {
-    Candle(Candle),
-    Event(StrategyEvent),
+    CandleAndEvents { candle: Candle, events: Vec<StrategyEvent> },
 }
 
 impl SupabaseEventStore {
@@ -178,6 +177,34 @@ impl SupabaseEventStore {
     }
 }
 
+async fn persist_candles_with_retry(store: &SupabaseEventStore, candles: &[Candle]) {
+    let mut backoff = 1_u64;
+    loop {
+        match store.persist_candles(candles).await {
+            Ok(()) => return,
+            Err(error) => {
+                error!(%error, backoff_seconds = backoff, "Candle persistence failed; retrying");
+                sleep(StdDuration::from_secs(backoff)).await;
+                backoff = (backoff * 2).min(60);
+            }
+        }
+    }
+}
+
+async fn persist_event_with_retry(store: &SupabaseEventStore, event: StrategyEvent) {
+    let mut backoff = 1_u64;
+    loop {
+        match store.persist_event(event.clone()).await {
+            Ok(()) => return,
+            Err(error) => {
+                error!(%error, backoff_seconds = backoff, "FMT event persistence failed; retrying");
+                sleep(StdDuration::from_secs(backoff)).await;
+                backoff = (backoff * 2).min(60);
+            }
+        }
+    }
+}
+
 fn log_events(events: &[StrategyEvent]) {
     for event in events {
         info!(event = ?event, "FMT strategy event");
@@ -208,9 +235,7 @@ async fn persist_events(store: Option<&SupabaseEventStore>, events: Vec<Strategy
         return;
     };
     for event in events {
-        if let Err(error) = store.persist_event(event).await {
-            error!(%error, "Failed to persist FMT strategy event");
-        }
+        persist_event_with_retry(store, event).await;
     }
 }
 
@@ -245,9 +270,7 @@ async fn backfill(
         let candles_for_storage = candles.clone();
         let events = process_candles(engine, last_processed, candles)?;
         if let Some(store) = store {
-            if let Err(error) = store.persist_candles(&candles_for_storage).await {
-                error!(%error, "Failed to persist Bybit market candle backfill");
-            }
+            persist_candles_with_retry(store, &candles_for_storage).await;
         }
         persist_events(store, events).await;
     }
@@ -295,19 +318,15 @@ async fn main() {
                 connected = true;
                 info!(last = ?last_processed, "Connected to Bybit confirmed M15 WebSocket");
 
-                let (event_tx, mut event_rx) = mpsc::unbounded_channel::<WorkerMessage>();
+                let (event_tx, mut event_rx) = mpsc::channel::<WorkerMessage>(256);
                 let store_for_task = store.clone();
                 let persistence_task = tokio::spawn(async move {
                     while let Some(event) = event_rx.recv().await {
                         match (store_for_task.as_ref(), event) {
-                            (Some(store), WorkerMessage::Candle(candle)) => {
-                                if let Err(error) = store.persist_candles(&[candle]).await {
-                                    error!(%error, "Failed to persist confirmed Bybit candle");
-                                }
-                            }
-                            (Some(store), WorkerMessage::Event(event)) => {
-                                if let Err(error) = store.persist_event(event).await {
-                                    error!(%error, "Failed to persist FMT strategy event");
+                            (Some(store), WorkerMessage::CandleAndEvents { candle, events }) => {
+                                persist_candles_with_retry(&store, &[candle]).await;
+                                for event in events {
+                                    persist_event_with_retry(&store, event).await;
                                 }
                             }
                             (None, _) => {}
@@ -323,22 +342,22 @@ async fn main() {
                             return Err("strategy handler already failed".into());
                         }
                         let candle_time = candle.open_time;
+                        let engine_before = engine.clone();
                         match engine.on_candle(candle) {
                             Ok(events) => {
-                                last_processed = Some(candle_time);
                                 log_events(&events);
-                                if store.is_some() && callback_tx.send(WorkerMessage::Candle(candle)).is_err() {
-                                    let error = "market candle persistence queue closed".to_string();
+                                if store.is_some()
+                                    && callback_tx.try_send(WorkerMessage::CandleAndEvents {
+                                        candle,
+                                        events: events.clone(),
+                                    }).is_err()
+                                {
+                                    *engine = engine_before;
+                                    let error = "market persistence queue is full or closed; candle will be replayed".to_string();
                                     callback_error = Some(error.clone());
                                     return Err(error);
                                 }
-                                for event in events {
-                                    if store.is_some() && callback_tx.send(WorkerMessage::Event(event)).is_err() {
-                                        let error = "strategy event persistence queue closed".to_string();
-                                        callback_error = Some(error.clone());
-                                        return Err(error);
-                                    }
-                                }
+                                last_processed = Some(candle_time);
                                 Ok(())
                             }
                             Err(error) => {
