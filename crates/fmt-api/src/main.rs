@@ -11,7 +11,7 @@ use rand::{rngs::OsRng, RngCore};
 use reqwest::{Client, RequestBuilder};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::{env, net::SocketAddr, str::FromStr};
+use std::{env, net::SocketAddr, str::FromStr, time::Duration as StdDuration};
 use tower_http::cors::{AllowOrigin, CorsLayer};
 
 const GMX_CHAIN_ID: u64 = 42161;
@@ -645,7 +645,10 @@ async fn main() {
     let origin = HeaderValue::from_str(&allowed_origin)
         .expect("CORS_ORIGIN must be a valid origin URL");
     let state = AppState {
-        http: Client::new(),
+        http: Client::builder()
+            .timeout(StdDuration::from_secs(15))
+            .build()
+            .expect("failed to create HTTP client"),
         supabase_url,
         supabase_anon_key,
         supabase_service_role_key,
