@@ -18,10 +18,10 @@ This file separates code that has been authored from code that has actually been
 
 ## Not yet executed or verified
 
-- `cargo fmt`, `cargo test`, and `cargo clippy` passed in GitHub Actions on commit `d5fb1e3`; a later run is rechecking the same Rust source on the current branch.
-- GMX adapter `npm run typecheck` has passed in GitHub Actions.
-- Dashboard TypeScript typecheck and Next.js production build passed in GitHub Actions on commit `e62ada7` after the EIP-1193 wallet migration; a fresh run is required after adding the paper ledger UI.
-- Docker images and `docker compose up --build` have not been built.
+- `cargo fmt`, `cargo test`, and `cargo clippy` passed in GitHub Actions after checking out current branch commit `0d19e39` (including the paper ledger worker).
+- GMX adapter `npm run typecheck` passed in GitHub Actions on the same validation run.
+- Dashboard TypeScript typecheck and Next.js production build passed in GitHub Actions after checking out commit `0d19e39`, including the EIP-1193 wallet migration and paper ledger UI.
+- Docker Compose configuration validation passed; Rust, GMX adapter, and Next.js container image builds are still running in GitHub Actions.
 - The Supabase migration has not been applied to a live Supabase project.
 - The Bybit feed has not been observed running against a configured environment.
 - The GMX SDK reads have not been verified against a connected Arbitrum wallet.
