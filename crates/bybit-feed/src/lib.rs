@@ -2,7 +2,7 @@
 //! The client fetches closed-history OHLCV candles only; callers must still avoid
 //! treating the currently forming candle as a confirmed signal.
 
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration, Utc};
 use fmt_strategy::Candle;
 use reqwest::{Client, Url};
 use serde::Deserialize;
@@ -115,6 +115,10 @@ impl BybitClient {
             .collect::<Result<Vec<_>, _>>()?;
         candles.sort_by_key(|c| c.open_time);
         candles.dedup_by_key(|c| c.open_time);
+        // The REST endpoint can return the currently forming candle. FMT is
+        // close-confirmed, so never pass a bar whose 15-minute interval is open.
+        let now = Utc::now();
+        candles.retain(|c| c.open_time + Duration::minutes(15) <= now);
         for candle in &candles {
             candle.validate().map_err(|e| BybitError::InvalidResponse(e.to_string()))?;
         }
