@@ -119,7 +119,7 @@ export function StrategyEventsPanel() {
             <div className="event-row" key={event.id}>
               <div>
                 <strong>{eventLabel(event.event_type)}</strong>
-                <span>{new Date(event.source_candle_open_time).toLocaleString("pt-BR")}</span>
+                <span>{new Date(event.source_candle_open_time).toLocaleString("pt-BR", { timeZone: "America/New_York" })}</span>
               </div>
               <b>{Number(event.reference_price).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b>
             </div>
