@@ -40,7 +40,7 @@ export function WalletVerificationPanel() {
 
   useEffect(() => {
     setVerifiedAddress(null);
-  }, [address, chainId]);
+  }, [accessToken, address, chainId]);
 
   useEffect(() => {
     if (!accessToken || !address || chainId !== arbitrum.id) return;
