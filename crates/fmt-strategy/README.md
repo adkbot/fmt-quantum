@@ -16,9 +16,9 @@ Initial Rust implementation of the FMT M15 session signal engine.
 
 1. Candle data must arrive exactly once and in strictly increasing timestamp order. Duplicate or out-of-order bars are rejected.
 2. Missing pre-session data does not reuse the previous session's range or VWAP.
-3. Exit checks run before entry checks. Therefore, if an exit and a fresh entry both qualify on one candle, the engine may emit both events in that order, matching the sequential rule evaluation.
-4. Session state in this signal engine is not an exchange position ledger. The execution service must reconcile actual GMX on-chain positions and must never clear an open position merely because a session changed.
-5. This crate is not yet parity-certified against the user's original Pine Script. Pine's exact bar/session semantics and edge cases must be tested against exported TradingView candles before live use.
+3. The previous candle close is retained across the 19:45-to-20:00 boundary, matching Pine's `close[1]` reference on the first Tokyo candle. The logical position is reset at the next Tokyo start, not at 06:00.\n4. Exit checks run before entry checks. Therefore, if an exit and a fresh entry both qualify on one candle, the engine may emit both events in that order, matching the sequential rule evaluation.
+5. Session state in this signal engine is not an exchange position ledger. The execution service must reconcile actual GMX on-chain positions and must never clear an open position merely because a session changed.
+7. This crate is not yet parity-certified against the user's original Pine Script. Pine's exact bar/session semantics and edge cases must be tested against exported TradingView candles before live use.
 6. This crate does not contain Bybit ingestion, GMX SDK integration, risk sizing, multi-user isolation, wallet authorization, or order execution.
 
 ## Build
