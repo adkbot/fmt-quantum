@@ -13,7 +13,8 @@ First operational worker prototype for the confirmed Bybit M15 data stream.
 7. Fans live WebSocket FMT signals out to enabled user instances that were active before the current session began; mid-session activations join at the next session to avoid orphan exits.
 8. Persists user-scoped events and updates each user's paper position ledger.
 9. Reconnects only after attempting REST backfill; the engine rejects missing or out-of-order candles.
-10. Paper PnL is gross price movement in basis points; fees, slippage, funding, and actual GMX fills are not simulated.\n11. It does not create orders.
+10. Paper PnL is gross price movement in basis points; fees, slippage, funding, and actual GMX fills are not simulated.
+11. It does not create orders.
 
 ## Environment
 
