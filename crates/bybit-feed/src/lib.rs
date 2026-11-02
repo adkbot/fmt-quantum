@@ -240,6 +240,14 @@ pub struct BybitKlineStream {
 
 impl BybitKlineStream {
     pub async fn connect(environment: Environment) -> Result<Self, BybitError> {
+        Self::connect_after(environment, None).await
+    }
+
+    /// Connect after REST backfill, seeding the last processed candle timestamp.
+    pub async fn connect_after(
+        environment: Environment,
+        last_open_time: Option<DateTime<Utc>>,
+    ) -> Result<Self, BybitError> {
         let (mut socket, _) = connect_async(environment.websocket_url())
             .await
             .map_err(|e| BybitError::WebSocket(e.to_string()))?;
@@ -251,7 +259,7 @@ impl BybitKlineStream {
             .send(Message::Text(subscription.to_string().into()))
             .await
             .map_err(|e| BybitError::WebSocket(e.to_string()))?;
-        Ok(Self { socket, last_open_time: None })
+        Ok(Self { socket, last_open_time })
     }
 
     /// Runs until the connection closes or an invalid/out-of-order confirmed
@@ -294,13 +302,21 @@ impl BybitKlineStream {
                                 }
                                 let candle = parse_ws_kline(row)?;
                                 if let Some(last) = last_open_time {
-                                    if candle.open_time < last {
+                                    let gap_minutes = candle.open_time
+                                        .signed_duration_since(last)
+                                        .num_minutes();
+                                    if gap_minutes < 0 {
                                         return Err(BybitError::InvalidResponse(
                                             "out-of-order WebSocket candle; REST backfill required".into()
                                         ));
                                     }
-                                    if candle.open_time == last {
+                                    if gap_minutes == 0 {
                                         continue;
+                                    }
+                                    if gap_minutes != 15 {
+                                        return Err(BybitError::InvalidResponse(
+                                            "missing M15 candle; REST backfill required".into()
+                                        ));
                                     }
                                 }
                                 candle.validate()
