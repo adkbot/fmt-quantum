@@ -4,6 +4,7 @@ import { useAccount, useConnect, useDisconnect, useSwitchChain } from "wagmi";
 import { AuthPanel } from "@/components/auth-panel";
 import { RiskConfigPanel } from "@/components/risk-config-panel";
 import { WalletVerificationPanel } from "@/components/wallet-verification-panel";
+import { GmxAccountPanel } from "@/components/gmx-account-panel";
 import { arbitrum } from "wagmi/chains";
 
 function shortAddress(address?: string) {
@@ -124,20 +125,7 @@ export default function HomePage() {
         </article>
       </section>
 
-      <section className="panel positions-panel">
-        <div className="panel-heading">
-          <div>
-            <div className="eyebrow">CONTA GMX</div>
-            <h2>Posições e ordens</h2>
-          </div>
-          <span className="tag muted-tag">AGUARDANDO BACKEND</span>
-        </div>
-        <div className="empty-state">
-          <div className="empty-icon">↗</div>
-          <strong>Dados de conta ainda não carregados</strong>
-          <p>O adaptador GMX está preparado para consultas, mas a API autenticada e a leitura conectada à carteira ainda estão em desenvolvimento.</p>
-        </div>
-      </section>
+      <GmxAccountPanel />
 
       <footer>
         <span>FMT QUANTUM · BUILD 0.1.0</span>
