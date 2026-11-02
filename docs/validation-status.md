@@ -16,9 +16,9 @@ This file separates code that has been authored from code that has actually been
 
 ## Not yet executed or verified
 
-- `cargo fmt`, `cargo test`, and `cargo clippy` passed in GitHub Actions on commit `d5fb1e3`; the latest worker changes and current branch head still require a fresh run.
+- `cargo fmt`, `cargo test`, and `cargo clippy` passed in GitHub Actions on commit `d5fb1e3`; a later run is rechecking the same Rust source on the current branch.
 - GMX adapter `npm run typecheck` has passed in GitHub Actions.
-- Dashboard typecheck and production build are pending after the direct EIP-1193 wallet migration; an earlier build failed because Wagmi's connector barrel pulled missing optional Coinbase x402 packages, and that dependency path has been removed.
+- Dashboard TypeScript typecheck and Next.js production build passed in GitHub Actions on commit `e62ada7` after replacing the Wagmi connector stack with the direct EIP-1193 wallet context.
 - Docker images and `docker compose up --build` have not been built.
 - The Supabase migration has not been applied to a live Supabase project.
 - The Bybit feed has not been observed running against a configured environment.
