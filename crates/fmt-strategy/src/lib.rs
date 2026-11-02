@@ -168,7 +168,7 @@ impl FmtEngine {
             }
             let contiguous = self.pre_session_last_time
                 .as_ref()
-                .map_or(true, |last| candle.open_time.signed_duration_since(last.clone()).num_minutes() == 15);
+                .map_or(true, |last| candle.open_time.signed_duration_since(*last).num_minutes() == 15);
             if (self.pre_session_bars == 0 && minute_of_day != 18 * 60) || !contiguous {
                 self.pre_session_sequence_valid = false;
             }
@@ -228,7 +228,7 @@ impl FmtEngine {
                     events.push(StrategyEvent::Exit {
                         side,
                         price: candle.close,
-                        time: candle.open_time.clone(),
+                        time: candle.open_time,
                         reason,
                     });
                     self.position = Position::Flat;
