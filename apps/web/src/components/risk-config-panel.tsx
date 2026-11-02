@@ -5,14 +5,21 @@ import { supabase } from "@/lib/supabase";
 
 type RiskConfig = {
   max_open_positions: number;
-  max_position_notional_usd: number;
-  max_total_exposure_usd: number;
-  max_portfolio_leverage: number;
+  max_position_notional_cents: number;
+  max_total_exposure_cents: number;
+  max_portfolio_leverage_bps: number;
   max_price_divergence_bps: number;
-  min_free_collateral_ratio: number;
+  min_free_collateral_bps: number;
 };
 
-type RiskForm = Record<keyof RiskConfig, string>;
+type RiskForm = {
+  max_open_positions: string;
+  max_position_notional_usd: string;
+  max_total_exposure_usd: string;
+  max_portfolio_leverage: string;
+  max_price_divergence_bps: string;
+  min_free_collateral_ratio: string;
+};
 
 const emptyForm: RiskForm = {
   max_open_positions: "",
@@ -26,11 +33,11 @@ const emptyForm: RiskForm = {
 function toForm(config: RiskConfig): RiskForm {
   return {
     max_open_positions: String(config.max_open_positions),
-    max_position_notional_usd: String(config.max_position_notional_usd),
-    max_total_exposure_usd: String(config.max_total_exposure_usd),
-    max_portfolio_leverage: String(config.max_portfolio_leverage),
+    max_position_notional_usd: (config.max_position_notional_cents / 100).toFixed(2),
+    max_total_exposure_usd: (config.max_total_exposure_cents / 100).toFixed(2),
+    max_portfolio_leverage: (config.max_portfolio_leverage_bps / 10_000).toString(),
     max_price_divergence_bps: String(config.max_price_divergence_bps),
-    min_free_collateral_ratio: String(config.min_free_collateral_ratio)
+    min_free_collateral_ratio: (config.min_free_collateral_bps / 10_000).toString()
   };
 }
 
@@ -97,7 +104,7 @@ export function RiskConfigPanel() {
     };
   }, [accessToken]);
 
-  function updateField(field: keyof RiskConfig, value: string) {
+  function updateField(field: keyof RiskForm, value: string) {
     setForm((current) => ({ ...current, [field]: value }));
   }
 
@@ -105,31 +112,35 @@ export function RiskConfigPanel() {
     event.preventDefault();
     if (!accessToken) return;
 
+    const positionCents = Math.round(Number(form.max_position_notional_usd) * 100);
+    const totalCents = Math.round(Number(form.max_total_exposure_usd) * 100);
+    const leverageBps = Math.round(Number(form.max_portfolio_leverage) * 10_000);
+    const collateralBps = Math.round(Number(form.min_free_collateral_ratio) * 10_000);
     const config: RiskConfig = {
       max_open_positions: Number(form.max_open_positions),
-      max_position_notional_usd: Number(form.max_position_notional_usd),
-      max_total_exposure_usd: Number(form.max_total_exposure_usd),
-      max_portfolio_leverage: Number(form.max_portfolio_leverage),
+      max_position_notional_cents: positionCents,
+      max_total_exposure_cents: totalCents,
+      max_portfolio_leverage_bps: leverageBps,
       max_price_divergence_bps: Number(form.max_price_divergence_bps),
-      min_free_collateral_ratio: Number(form.min_free_collateral_ratio)
+      min_free_collateral_bps: collateralBps
     };
 
     if (
       !Number.isInteger(config.max_open_positions) ||
       config.max_open_positions < 1 ||
       config.max_open_positions > 8 ||
-      !Number.isFinite(config.max_position_notional_usd) ||
-      config.max_position_notional_usd <= 0 ||
-      !Number.isFinite(config.max_total_exposure_usd) ||
-      config.max_total_exposure_usd <= 0 ||
-      !Number.isFinite(config.max_portfolio_leverage) ||
-      config.max_portfolio_leverage <= 0 ||
+      !Number.isSafeInteger(positionCents) ||
+      positionCents <= 0 ||
+      !Number.isSafeInteger(totalCents) ||
+      totalCents <= 0 ||
+      !Number.isSafeInteger(leverageBps) ||
+      leverageBps <= 0 ||
       !Number.isInteger(config.max_price_divergence_bps) ||
       config.max_price_divergence_bps < 0 ||
       config.max_price_divergence_bps > 1000 ||
-      !Number.isFinite(config.min_free_collateral_ratio) ||
-      config.min_free_collateral_ratio < 0 ||
-      config.min_free_collateral_ratio >= 1
+      !Number.isInteger(collateralBps) ||
+      collateralBps < 0 ||
+      collateralBps >= 10_000
     ) {
       setMessage("Confira os valores. Posições: 1–8; divergência: 0–1000 bps; reserva livre: 0 a menos de 1.");
       return;
@@ -170,7 +181,7 @@ export function RiskConfigPanel() {
         </div>
         <span className="tag">MÁX. 8 POSIÇÕES</span>
       </div>
-      <p className="muted-copy">Os limites são individuais e validados no backend. Ao atingir o limite de posições, o sistema aguarda uma posição encerrar; não fecha uma operação boa para abrir outra.</p>
+      <p className="muted-copy">Os valores financeiros são enviados em centavos inteiros e as proporções em pontos-base para evitar arredondamento de ponto flutuante no motor de risco. Ao atingir o limite de posições, o sistema aguarda uma posição encerrar; não fecha uma operação boa para abrir outra.</p>
       <form className="risk-form" onSubmit={save}>
         <label>
           <span>Posições simultâneas (1–8)</span>
@@ -185,7 +196,7 @@ export function RiskConfigPanel() {
           <input type="number" min="0.01" step="0.01" value={form.max_total_exposure_usd} onChange={(event) => updateField("max_total_exposure_usd", event.target.value)} required disabled={!accessToken || loading || saving} />
         </label>
         <label>
-          <span>Alavancagem máxima da carteira</span>
+          <span>Alavancagem máxima da carteira (ex.: 3 = 3x)</span>
           <input type="number" min="0.01" step="0.01" value={form.max_portfolio_leverage} onChange={(event) => updateField("max_portfolio_leverage", event.target.value)} required disabled={!accessToken || loading || saving} />
         </label>
         <label>
@@ -193,7 +204,7 @@ export function RiskConfigPanel() {
           <input type="number" min="0" max="1000" step="1" value={form.max_price_divergence_bps} onChange={(event) => updateField("max_price_divergence_bps", event.target.value)} required disabled={!accessToken || loading || saving} />
         </label>
         <label>
-          <span>Reserva mínima de colateral (0–0,99)</span>
+          <span>Reserva mínima de colateral (fração 0–0,99)</span>
           <input type="number" min="0" max="0.99" step="0.01" value={form.min_free_collateral_ratio} onChange={(event) => updateField("min_free_collateral_ratio", event.target.value)} required disabled={!accessToken || loading || saving} />
         </label>
         <button className="button primary" type="submit" disabled={!accessToken || loading || saving}>
