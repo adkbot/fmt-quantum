@@ -37,7 +37,7 @@ A acumulação começa no início da janela pré-Tóquio e continua durante a se
 - Peso: `volume`.
 - VWAP: soma de `hlc3 * volume` dividida pela soma de volume.
 
-A fonte de candles e volume da implementação precisa ser definida e alinhada ao mercado GMX escolhido. Não misturar silenciosamente volume de uma exchange com preço de outra.
+A estratégia precisa de candles OHLCV para reproduzir a VWAP. A API oficial de candles GMX e o método `fetchOhlcv()` do SDK v2 documentam OHLC, mas não volume. Portanto, os cálculos de faixa, sinais e VWAP devem usar uma fonte OHLCV única e identificada, preferencialmente a mesma fonte/símbolo do gráfico TradingView de referência. A GMX será consultada separadamente para validar preço/oráculo, mercado ativo e execução. Diferenças entre as fontes devem ser medidas e limitadas, não ocultadas. O ticker/provedor exato do TradingView ainda precisa ser informado pelo usuário.
 
 ## Condição original de compra
 
@@ -73,7 +73,7 @@ O indicador mantém `emOperacao` e `tipoOperacao`. Ao iniciar a sessão, reinici
 
 ## Pontos que ainda exigem confirmação
 
-1. Fonte de preço, candles e volume usada para reproduzir a VWAP e os sinais.
+1. Ticker e provedor exatos usados no TradingView para obter candles OHLCV M15.
 2. Comportamento esperado quando saída e nova entrada aparecem no mesmo candle.
 
 ## Critério de paridade
