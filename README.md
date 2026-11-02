@@ -38,16 +38,18 @@ fmt-quantum/
 │   ├── bybit-feed/          # Feed REST + WebSocket confirmado
 │   ├── fmt-risk/            # Limites individuais e cálculos inteiros
 │   ├── fmt-api/             # API autenticada, risco e verificação de carteira
-│   └── fmt-worker/          # Backfill, stream, motor FMT e eventos por usuário
+│   └── fmt-worker/          # Backfill, stream, candles e eventos por usuário
 ├── apps/
-│   └── web/                 # Painel Next.js, Supabase Auth e MetaMask
+│   └── web/
+│       ├── Dockerfile       # Imagem de produção Next.js
+│       └── src/             # Painel, MetaMask, Supabase e gráfico M15
 ├── services/
-│   └── gmx-adapter/         # GMX SDK v2, somente leitura
+│   └── gmx-adapter/
+│       ├── Dockerfile       # Serviço privado de leitura GMX
+│       └── src/             # SDK GMX V2 e servidor Fastify
 ├── supabase/
-│   └── migrations/          # Esquema multiusuário e RLS
+│   └── migrations/          # Esquema multiusuário, RLS e Realtime
 ├── .github/workflows/       # CI Rust e TypeScript
-├── apps/web/Dockerfile      # Imagem de produção Next.js
-├── services/gmx-adapter/Dockerfile # Imagem do adaptador GMX
 └── docs/
 ```
 
