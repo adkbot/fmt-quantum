@@ -6,4 +6,4 @@ members = ["crates/fmt-strategy", "crates/bybit-feed", "crates/fmt-risk", "crate
 edition = "2021"
 license = "UNLICENSED"
 version = "0.1.0"
-rust-version = "1.75"
+rust-version = "1.85"
