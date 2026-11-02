@@ -135,8 +135,7 @@ async fn main() {
                 .allow_origin(AllowOrigin::exact(origin))
                 .allow_methods([Method::GET])
                 .allow_headers([header::AUTHORIZATION, header::CONTENT_TYPE]),
-        )
-        .with_state(state);
+        );
 
     let address: SocketAddr = bind.parse().expect("API_BIND must be a valid socket address");
     let listener = tokio::net::TcpListener::bind(address)
