@@ -13,7 +13,7 @@ Plataforma multiusuário não custodial para análise FMT e futura execução de
 **Persistência:** PostgreSQL / Supabase.  
 **Dados de referência:** Bybit BTCUSDT Linear Perpetual M15.
 
-> **Ainda não está pronto para operar com dinheiro real.** Não há envio de ordens, subcontas GMX ou execução financeira implementados. Testes, paridade com Pine, paper trading e revisão de segurança continuam obrigatórios.
+> **Ainda não está pronto para operar com dinheiro real.** Não há envio de ordens, subcontas GMX ou execução financeira implementados. Testes, paridade com Pine, validação do ledger paper e revisão de segurança continuam obrigatórios.
 
 ## Princípios de segurança
 
@@ -38,7 +38,7 @@ fmt-quantum/
 │   ├── bybit-feed/          # Feed REST + WebSocket confirmado
 │   ├── fmt-risk/            # Limites individuais e cálculos inteiros
 │   ├── fmt-api/             # API autenticada, risco e verificação de carteira
-│   └── fmt-worker/          # Backfill, stream, candles e eventos por usuário
+│   └── fmt-worker/          # Backfill, stream, candles, eventos e ledger paper
 ├── apps/
 │   └── web/
 │       ├── Dockerfile       # Imagem de produção Next.js
@@ -60,7 +60,7 @@ fmt-quantum/
 3. Endurecer o worker: fila durável, checkpoints, alertas, reconexão e replay de eventos.
 4. Validar o adaptador GMX somente leitura, completar a validação de mercados ativos e medir continuamente a divergência entre preço Bybit e oráculo GMX.
 5. Integrar o motor de risco a snapshots reais de posições, colateral, equity e limites por usuário.
-6. Implementar paper trading e backtesting com custos, funding, slippage e regras de saída.
+6. Validar o ledger paper atual e implementar backtesting com custos, funding, slippage e regras de saída.
 7. Projetar e auditar a autorização limitada de subconta GMX, sem custódia de carteira.
 8. Implementar execução e reconciliação on-chain somente após testes, auditoria e autorização explícita.
 
