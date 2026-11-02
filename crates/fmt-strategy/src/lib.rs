@@ -252,7 +252,7 @@ impl FmtEngine {
                         events.push(StrategyEvent::Enter {
                             side: Side::Buy,
                             price: candle.close,
-                            time: candle.open_time,
+                            time: candle.open_time.clone(),
                         });
                         self.position = Position::Open(Side::Buy);
                     } else if sell {
