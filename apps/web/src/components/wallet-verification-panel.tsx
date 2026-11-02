@@ -5,6 +5,12 @@ import { useAccount, useSignMessage } from "wagmi";
 import { arbitrum } from "wagmi/chains";
 import { supabase } from "@/lib/supabase";
 
+type WalletConnection = {
+  wallet_address: string;
+  chain_id: number;
+  verified_at: string;
+};
+
 type ChallengeResponse = {
   wallet_address: string;
   chain_id: number;
