@@ -126,3 +126,13 @@ footer { display: flex; justify-content: space-between; gap: 16px; color: #66758
 
 .strategy-control { margin-top: 18px; padding-top: 17px; border-top: 1px solid var(--border); }
 .strategy-control .button { margin-top: 12px; }
+
+.strategy-events { margin-top: 14px; padding: 22px; }
+.strategy-events .panel-heading { margin-bottom: 8px; }
+.empty-events { margin-top: 14px; padding: 20px; border: 1px dashed var(--border); border-radius: 8px; color: var(--muted); text-align: center; font-size: 11px; }
+.event-list { display: flex; flex-direction: column; margin-top: 12px; }
+.event-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.event-row > div { display: flex; flex-direction: column; gap: 5px; }
+.event-row strong { color: var(--cyan); font: 600 10px "DM Mono", monospace; letter-spacing: .04em; }
+.event-row span { color: var(--muted); font-size: 10px; }
+.event-row b { color: var(--text); font: 500 12px "DM Mono", monospace; }
