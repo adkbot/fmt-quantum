@@ -10,9 +10,9 @@ First operational worker prototype for the confirmed Bybit M15 data stream.
 4. Passes only `confirm=true` candles to the Rust FMT engine.
 5. Upserts confirmed OHLCV candles into the shared `market_candles` table.
 6. Uses REST backfill only to rebuild strategy state and persist candle history; historical signals are suppressed.
-7. Fans live WebSocket FMT signals out to every enabled user's strategy instance and persists user-scoped events.
-8. Reconnects only after attempting REST backfill; the engine rejects missing or out-of-order candles.
-9. It does not create orders.
+7. Fans live WebSocket FMT signals out to enabled user instances that were active before the current session began; mid-session activations join at the next session to avoid orphan exits.\n8. Persists user-scoped events.
+9. Reconnects only after attempting REST backfill; the engine rejects missing or out-of-order candles.
+10. It does not create orders.
 
 ## Environment
 
