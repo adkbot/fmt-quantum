@@ -147,3 +147,5 @@ footer { display: flex; justify-content: space-between; gap: 16px; color: #66758
 
 .wallet-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
 .wallet-actions .button { margin-top: 0; }
+
+.wallet-error { margin: 8px 0; color: var(--danger, #ef5350); }
