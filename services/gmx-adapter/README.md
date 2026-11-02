@@ -2,11 +2,24 @@
 
 This isolated TypeScript service uses the official `@gmx-io/sdk/v2` client for Arbitrum One (chain ID 42161). It is kept separate because GMX's supported SDK is TypeScript while the strategy/risk core is Rust.
 
-## Implemented in this first slice
+## Private read-only HTTP service
 
-- Read GMX market catalog, market info, config, and values.
+Run with `npm install` and `npm start`. The service binds to `127.0.0.1:8090` by default and requires `GMX_ADAPTER_INTERNAL_KEY`.
+
+Every route requires the `x-internal-api-key` header. The Rust API is the intended caller and keeps this secret server-side.
+
+- `GET /health`: adapter status.
+- `GET /markets`: GMX market catalog, market info, config, and values.
+- `GET /account/:address`: wallet positions, orders, and balances.
+- `GET /tickers?symbols=...`: requested market tickers.
+
+The HTTP service converts BigInt values to strings for JSON serialization.
+
+## Implemented
+
+- Read GMX market catalog, market info, config, values, and tickers.
 - Read a connected wallet's positions, active orders, and wallet balances.
-- Read market tickers.
+- Rust API proxies market reads to authenticated users and only proxies account reads for wallets already verified and linked to that user.
 - No private key or seed phrase is accepted or persisted.
 
 ## Not implemented / intentionally disabled
