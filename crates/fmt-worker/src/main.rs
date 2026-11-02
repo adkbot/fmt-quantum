@@ -40,7 +40,7 @@ impl EventOrigin {
         }
     }
 
-    fn execution_eligible(self) -> bool {
+    fn is_live_signal(self) -> bool {
         matches!(self, Self::LiveWebSocket)
     }
 }
@@ -278,7 +278,8 @@ impl SupabaseEventStore {
         };
         if let Some(payload) = detail.as_object_mut() {
             payload.insert("origin".into(), json!(origin.as_str()));
-            payload.insert("execution_eligible".into(), json!(origin.execution_eligible()));
+            payload.insert("is_live_signal".into(), json!(origin.is_live_signal()));
+            payload.insert("execution_eligible".into(), json!(false));
         }
 
         let strategies_url = format!("{}/rest/v1/strategy_instances", self.base_url);
