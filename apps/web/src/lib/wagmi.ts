@@ -1,6 +1,6 @@
 import { createConfig, http } from "wagmi";
 import { arbitrum } from "wagmi/chains";
-import { injected } from "wagmi/connectors";
+import { injected } from "@wagmi/core";
 
 export const wagmiConfig = createConfig({
   chains: [arbitrum],
