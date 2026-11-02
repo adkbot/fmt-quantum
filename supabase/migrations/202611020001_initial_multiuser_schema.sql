@@ -42,11 +42,11 @@ create table if not exists public.wallet_connections (
 create table if not exists public.risk_configs (
   user_id uuid primary key references auth.users(id) on delete cascade,
   max_open_positions smallint not null default 1 check (max_open_positions between 1 and 8),
-  max_position_notional_usd numeric(20, 2) not null check (max_position_notional_usd > 0),
-  max_total_exposure_usd numeric(20, 2) not null check (max_total_exposure_usd > 0),
-  max_portfolio_leverage numeric(10, 4) not null check (max_portfolio_leverage > 0),
+  max_position_notional_cents bigint not null check (max_position_notional_cents > 0),
+  max_total_exposure_cents bigint not null check (max_total_exposure_cents > 0),
+  max_portfolio_leverage_bps integer not null check (max_portfolio_leverage_bps > 0),
   max_price_divergence_bps integer not null default 30 check (max_price_divergence_bps between 0 and 1000),
-  min_free_collateral_ratio numeric(6, 5) not null default 0.20 check (min_free_collateral_ratio >= 0 and min_free_collateral_ratio < 1),
+  min_free_collateral_bps integer not null default 2000 check (min_free_collateral_bps between 0 and 9999),
   updated_at timestamptz not null default now()
 );
 
