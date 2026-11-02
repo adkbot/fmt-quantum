@@ -102,3 +102,15 @@ footer { display: flex; justify-content: space-between; gap: 16px; color: #66758
 }
 
 .api-status { color: var(--muted); font: 10px 'DM Mono', monospace; line-height: 1.6; margin: 10px 0 0; }
+
+.risk-config { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--border); }
+.risk-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+.risk-form label { display: flex; flex-direction: column; gap: 7px; color: var(--muted); font-size: 10px; }
+.risk-form input { width: 100%; min-width: 0; padding: 10px 11px; border: 1px solid var(--border); border-radius: 7px; outline: none; color: var(--text); background: #080e14; font: 11px "DM Mono", monospace; }
+.risk-form input:focus { border-color: #4babbc; }
+.risk-form input:disabled { opacity: .55; }
+.risk-form .button { grid-column: 1 / -1; justify-self: start; margin-top: 3px; }
+@media (max-width: 620px) {
+  .risk-form { grid-template-columns: 1fr; }
+  .risk-form .button { width: 100%; }
+}
