@@ -257,3 +257,20 @@ create policy "audit owner can read" on public.audit_events
 -- strategy activation, events, positions, execution records, or audit events.
 -- Trusted server services use the Supabase service-role key and must scope every
 -- write to the authenticated user ID established by Supabase Auth.
+
+
+-- Publish strategy signal inserts for authenticated, RLS-scoped dashboard updates.
+do $$
+begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime')
+     and not exists (
+       select 1
+       from pg_publication_tables
+       where pubname = 'supabase_realtime'
+         and schemaname = 'public'
+         and tablename = 'strategy_events'
+     ) then
+    execute 'alter publication supabase_realtime add table public.strategy_events';
+  end if;
+end;
+$$;
