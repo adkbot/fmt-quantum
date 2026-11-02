@@ -1,6 +1,6 @@
 use bybit_feed::{BybitClient, BybitKlineStream, Environment};
 use chrono::{DateTime, Duration, Utc};
-use fmt_strategy::{FmtEngine, Side, StrategyEvent};
+use fmt_strategy::{Candle, FmtEngine, Side, StrategyEvent};
 use reqwest::Client;
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -24,6 +24,11 @@ struct ActiveStrategy {
     user_id: String,
 }
 
+enum WorkerMessage {
+    Candle(Candle),
+    Event(StrategyEvent),
+}
+
 impl SupabaseEventStore {
     fn from_env() -> Option<Self> {
         let base_url = env::var("SUPABASE_URL").ok()?;
@@ -39,6 +44,43 @@ impl SupabaseEventStore {
         request
             .header("apikey", &self.service_role_key)
             .bearer_auth(&self.service_role_key)
+    }
+
+    async fn persist_candles(&self, candles: &[Candle]) -> Result<(), String> {
+        if candles.is_empty() {
+            return Ok(());
+        }
+        let rows: Vec<Value> = candles
+            .iter()
+            .map(|candle| {
+                json!({
+                    "source_venue": "BYBIT",
+                    "source_category": "linear",
+                    "source_symbol": "BTCUSDT",
+                    "timeframe_minutes": 15,
+                    "open_time": candle.open_time.to_rfc3339(),
+                    "open": candle.open,
+                    "high": candle.high,
+                    "low": candle.low,
+                    "close": candle.close,
+                    "volume": candle.volume
+                })
+            })
+            .collect();
+        let url = format!("{}/rest/v1/market_candles", self.base_url);
+        self.authenticated_request(self.http.post(url.as_str()))
+            .query(&[(
+                "on_conflict",
+                "source_venue,source_category,source_symbol,timeframe_minutes,open_time",
+            )])
+            .header("Prefer", "resolution=merge-duplicates,return=minimal")
+            .json(&rows)
+            .send()
+            .await
+            .map_err(|error| error.to_string())?
+            .error_for_status()
+            .map_err(|error| error.to_string())?;
+        Ok(())
     }
 
     async fn persist_event(&self, event: StrategyEvent) -> Result<(), String> {
@@ -197,7 +239,13 @@ async fn backfill(
 
     if !candles.is_empty() {
         info!(count = candles.len(), "Processing Bybit REST backfill");
+        let candles_for_storage = candles.clone();
         let events = process_candles(engine, last_processed, candles)?;
+        if let Some(store) = store {
+            if let Err(error) = store.persist_candles(&candles_for_storage).await {
+                error!(%error, "Failed to persist Bybit market candle backfill");
+            }
+        }
         persist_events(store, events).await;
     }
     Ok(())
@@ -243,11 +291,23 @@ async fn main() {
                 connected = true;
                 info!(last = ?last_processed, "Connected to Bybit confirmed M15 WebSocket");
 
-                let (event_tx, mut event_rx) = mpsc::unbounded_channel::<StrategyEvent>();
+                let (event_tx, mut event_rx) = mpsc::unbounded_channel::<WorkerMessage>();
                 let store_for_task = store.clone();
                 let persistence_task = tokio::spawn(async move {
                     while let Some(event) = event_rx.recv().await {
-                        persist_events(store_for_task.as_ref(), vec![event]).await;
+                        match (store_for_task.as_ref(), event) {
+                            (Some(store), WorkerMessage::Candle(candle)) => {
+                                if let Err(error) = store.persist_candles(&[candle]).await {
+                                    error!(%error, "Failed to persist confirmed Bybit candle");
+                                }
+                            }
+                            (Some(store), WorkerMessage::Event(event)) => {
+                                if let Err(error) = store.persist_event(event).await {
+                                    error!(%error, "Failed to persist FMT strategy event");
+                                }
+                            }
+                            (None, _) => {}
+                        }
                     }
                 });
                 let callback_tx = event_tx.clone();
@@ -263,9 +323,14 @@ async fn main() {
                             Ok(events) => {
                                 last_processed = Some(candle_time);
                                 log_events(&events);
+                                if store.is_some() && callback_tx.send(WorkerMessage::Candle(candle)).is_err() {
+                                    let error = "market candle persistence queue closed".to_string();
+                                    callback_error = Some(error.clone());
+                                    return Err(error);
+                                }
                                 for event in events {
-                                    if callback_tx.send(event).is_err() {
-                                        let error = "event persistence queue closed".to_string();
+                                    if store.is_some() && callback_tx.send(WorkerMessage::Event(event)).is_err() {
+                                        let error = "strategy event persistence queue closed".to_string();
                                         callback_error = Some(error.clone());
                                         return Err(error);
                                     }
