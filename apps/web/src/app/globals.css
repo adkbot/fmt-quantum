@@ -87,3 +87,16 @@ footer { display: flex; justify-content: space-between; gap: 16px; color: #66758
   .strategy-panel, .wallet-panel, .positions-panel { padding: 17px; }
   footer { flex-direction: column; }
 }
+
+.auth-panel { margin-top: 20px; padding-top: 17px; border-top: 1px solid var(--border); }
+.auth-email { display: block; color: var(--cyan); font: 11px "DM Mono", monospace; overflow-wrap: anywhere; }
+.auth-form { display: flex; gap: 8px; margin-top: 12px; }
+.auth-form input { min-width: 0; flex: 1; padding: 10px 11px; border: 1px solid var(--border); border-radius: 7px; outline: none; color: var(--text); background: #080e14; font-size: 11px; }
+.auth-form input:focus { border-color: #4babbc; }
+.auth-form input:disabled { opacity: .55; }
+.auth-warning, .auth-message { color: var(--amber); font-size: 10px; line-height: 1.6; margin: 10px 0 0; }
+.auth-message { color: var(--green); }
+@media (max-width: 620px) {
+  .auth-form { flex-direction: column; }
+  .auth-form .button { width: 100%; }
+}
