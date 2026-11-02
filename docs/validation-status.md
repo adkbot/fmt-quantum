@@ -4,6 +4,8 @@ This file separates code that has been authored from code that has actually been
 
 ## Authored
 
+- `Cargo.lock`, `apps/web/package-lock.json`, and `services/gmx-adapter/package-lock.json` are committed; Docker and local setup use lockfile-based installs.
+
 - Rust FMT strategy engine and unit tests for M15 validation, pre-session completeness, entry behavior, and same-candle exit/re-entry sequencing.
 - Rust risk engine and unit tests for per-user limits, eight-position deferral, market verification, price divergence, and collateral buffer.
 - Bybit V5 REST/WebSocket feed and worker backfill/reconnect path.
@@ -17,7 +19,7 @@ This file separates code that has been authored from code that has actually been
 
 - `cargo fmt`, `cargo test`, and `cargo clippy` passed in GitHub Actions on commit `d5fb1e3`; the latest worker changes and current branch head still require a fresh run.
 - GMX adapter `npm run typecheck` has passed in GitHub Actions.\n- Dashboard TypeScript typecheck passed in an earlier CI run, but the Next.js production build failed due optional connector imports; the wallet integration has since been rewritten to use EIP-1193 directly and requires a fresh successful build.
-- Dashboard `npm run typecheck` and `npm run build` have not been run.
+- Dashboard typecheck and production build are pending after the direct EIP-1193 wallet migration; an earlier build failed because Wagmi's connector barrel pulled missing optional Coinbase x402 packages, and that dependency path has been removed.
 - Docker images and `docker compose up --build` have not been built.
 
 - The Supabase migration has not been applied to a live Supabase project.
@@ -25,7 +27,7 @@ This file separates code that has been authored from code that has actually been
 - The GMX SDK reads have not been verified against a connected Arbitrum wallet.
 - The literal Pine Script source has not yet been located in the conversation or Library; exact parity remains blocked until the user supplies it.\n- No TradingView/Pine parity run has been completed using exported reference candles.
 - No paper-trading or backtest report exists.
-- No independent security audit has been completed.
+- Latest lockfile audit after safe overrides: dashboard reported 0 vulnerabilities; GMX adapter retained 9 low-severity transitive advisories in the ethers/elliptic dependency path. No high or moderate advisories remained.\n- No independent security audit has been completed.
 
 ## Release gate
 
