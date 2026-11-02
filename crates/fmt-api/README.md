@@ -7,7 +7,7 @@ First Rust HTTP service scaffold.
 - `GET /health`: public health/status response. It always reports `execution_enabled: false`.
 - `GET /v1/me`: protected identity route. Requires a Supabase access token in the Bearer authorization header.
 
-The middleware validates the token against Supabase Auth's `/auth/v1/user` endpoint and only then exposes the authenticated user ID to the route.
+The `/v1/me` handler validates the token against Supabase Auth's `/auth/v1/user` endpoint and returns the authenticated user ID.
 
 ## Required environment
 
