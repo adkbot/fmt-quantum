@@ -138,6 +138,14 @@ impl BybitClient {
         for candle in &candles {
             candle.validate().map_err(|e| BybitError::InvalidResponse(e.to_string()))?;
         }
+        for pair in candles.windows(2) {
+            let gap = pair[1].open_time.signed_duration_since(pair[0].open_time).num_minutes();
+            if gap != 15 {
+                return Err(BybitError::InvalidResponse(
+                    "REST history contains a missing or misaligned M15 candle".into(),
+                ));
+            }
+        }
         Ok(candles)
     }
 
