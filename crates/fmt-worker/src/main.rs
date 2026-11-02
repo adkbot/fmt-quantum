@@ -231,7 +231,7 @@ impl SupabaseEventStore {
             "status": "CLOSED",
             "exit_price": price,
             "exit_candle_open_time": event_time.to_rfc3339(),
-            "pnl_bps": gross_pnl_bps.round() as i64
+            "pnl_bps": gross_pnl_bps
         });
         self.authenticated_request(self.http.patch(positions_url.as_str()))
             .query(&[("id", id_filter.as_str()), ("status", open_filter)])
