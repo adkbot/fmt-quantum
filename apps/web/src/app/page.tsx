@@ -6,6 +6,7 @@ import { RiskConfigPanel } from "@/components/risk-config-panel";
 import { WalletVerificationPanel } from "@/components/wallet-verification-panel";
 import { GmxAccountPanel } from "@/components/gmx-account-panel";
 import { StrategyControlPanel } from "@/components/strategy-control-panel";
+import { StrategyEventsPanel } from "@/components/strategy-events-panel";
 import { arbitrum } from "wagmi/chains";
 
 function shortAddress(address?: string) {
@@ -128,6 +129,7 @@ export default function HomePage() {
       </section>
 
       <GmxAccountPanel />
+      <StrategyEventsPanel />
 
       <footer>
         <span>FMT QUANTUM · BUILD 0.1.0</span>
