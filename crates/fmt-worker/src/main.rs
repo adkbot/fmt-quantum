@@ -34,7 +34,10 @@ impl SupabaseEventStore {
         let base_url = env::var("SUPABASE_URL").ok()?;
         let service_role_key = env::var("SUPABASE_SERVICE_ROLE_KEY").ok()?;
         Some(Self {
-            http: Client::new(),
+            http: Client::builder()
+                .timeout(StdDuration::from_secs(15))
+                .build()
+                .expect("failed to create Supabase HTTP client"),
             base_url: base_url.trim_end_matches('/').to_string(),
             service_role_key,
         })
