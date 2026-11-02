@@ -114,10 +114,11 @@ async fn get_risk_config(
 ) -> Result<Json<RiskConfig>, StatusCode> {
     let user = authenticate_user(&state, &headers).await?;
     let url = format!("{}/rest/v1/risk_configs", state.supabase_url.trim_end_matches('/'));
+    let user_filter = format!("eq.{}", user.id);
     let rows = admin_request(&state, state.http.get(url))
         .query(&[
             ("select", "user_id,max_open_positions,max_position_notional_usd,max_total_exposure_usd,max_portfolio_leverage,max_price_divergence_bps,min_free_collateral_ratio"),
-            ("user_id", &format!("eq.{}", user.id)),
+            ("user_id", user_filter.as_str()),
             ("limit", "1"),
         ])
         .send()
