@@ -157,3 +157,22 @@ npm run build
 - The wallet signature is a proof of address ownership only; it is not an order or token approval.
 - GMX adapter routes are read-only. The API has no order submission route.
 - Do not enable live trading; it is not implemented.
+
+
+## Optional: run all services with Docker Compose
+
+After filling the root `.env` with Supabase credentials, the shared internal adapter key, and the three `NEXT_PUBLIC_*` values:
+
+```powershell
+docker compose up --build
+```
+
+Open `http://localhost:3000`. The dashboard, Rust API, private GMX read-only adapter, and Bybit worker start as separate containers. The GMX adapter is not published to the host; only the API can reach it on the internal Docker network.
+
+To stop the services:
+
+```powershell
+docker compose down
+```
+
+The Compose setup is an initial local deployment scaffold and has not yet been validated by a successful container build.
