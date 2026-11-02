@@ -628,6 +628,7 @@ async fn verify_wallet_signature(
 
 #[tokio::main]
 async fn main() {
+    let _ = dotenvy::dotenv();
     let supabase_url =
         env::var("SUPABASE_URL").expect("SUPABASE_URL must be configured");
     let supabase_anon_key =
