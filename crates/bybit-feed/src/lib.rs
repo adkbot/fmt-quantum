@@ -8,7 +8,6 @@ use fmt_strategy::Candle;
 use reqwest::{Client, Url};
 use serde::Deserialize;
 use serde_json::Value;
-use std::time::Duration as StdDuration;
 use tokio::net::TcpStream;
 use tokio::time::{interval_at, Duration as TokioDuration, Instant};
 use tokio_tungstenite::{connect_async, tungstenite::Message, MaybeTlsStream, WebSocketStream};
