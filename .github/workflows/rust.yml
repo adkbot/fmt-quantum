@@ -66,7 +66,8 @@ jobs:
         with:
           node-version: 22
       - name: Install dependencies
-        run: npm install --no-package-lock
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install --package-lock-only && npm ci; fi
       - name: TypeScript typecheck
         run: npm run typecheck
       - name: Build dashboard
