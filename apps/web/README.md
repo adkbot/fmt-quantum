@@ -13,6 +13,7 @@ Initial Next.js dashboard shell for FMT QUANTUM.
 - Per-user FMT monitoring activation backed by `/v1/strategy`; activation requires saved risk limits.
 - On-demand read-only GMX account snapshot for verified Arbitrum wallets.
 - User-scoped FMT signal history and Supabase Realtime inserts.
+- BTCUSDT M15 candlestick chart from the persisted Bybit OHLCV stream, displayed in New York time.
 - User-scoped FMT signal history and Supabase Realtime inserts.
 - Arbitrum One network detection and switch action.
 - Clear development/offline indicators.
@@ -20,6 +21,6 @@ Initial Next.js dashboard shell for FMT QUANTUM.
 
 ## Not yet connected
 
-The UI can request GMX account snapshots on demand, but is not connected to Bybit live data or a real-time position stream. The risk settings API is connected, but it does not yet control a live execution path. Connecting a wallet in this shell does not yet prove wallet ownership; a server-verified signature challenge is required before associating a wallet with a user account.
+The UI receives Bybit M15 candles through Supabase Realtime when the Rust worker is running; it does not yet receive a real-time GMX position stream. The risk settings API is connected, but it does not yet control a live execution path. Connecting a wallet in this shell does not yet prove wallet ownership; a server-verified signature challenge is required before associating a wallet with a user account.
 
 Execution remains disabled.
