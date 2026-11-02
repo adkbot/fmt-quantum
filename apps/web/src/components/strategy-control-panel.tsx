@@ -43,11 +43,12 @@ export function StrategyControlPanel() {
       return;
     }
 
+    const baseUrl = apiUrl.replace(/\/$/, "");
     let cancelled = false;
     async function load() {
       setLoading(true);
       try {
-        const response = await fetch(`${apiUrl.replace(/\/$/, "")}/v1/strategy`, {
+        const response = await fetch(`${baseUrl}/v1/strategy`, {
           headers: { Authorization: `Bearer ${accessToken}` }
         });
         if (!response.ok) throw new Error(`Falha ao carregar estratégia (HTTP ${response.status}).`);
