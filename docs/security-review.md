@@ -29,5 +29,5 @@ This is an implementation checklist, not an independent audit or production appr
 - No server-side idempotency permit has been implemented for future execution.
 - Risk evaluation is not yet connected to authoritative live GMX equity, collateral, positions, funding, fees, or liquidation distance.
 - The frontend has no CSRF/session-cookie architecture because it currently uses the browser Supabase client; review before introducing cookie-based auth.
-- Wallet unlink UI, expired challenge cleanup, alerting, secret rotation, and production key management remain to be implemented.
+- Expired challenge cleanup, alerting, secret rotation, and production key management remain to be implemented. Wallet unlink is available in the dashboard; it removes only the database association and does not revoke external on-chain permissions.
 - No live trading is enabled. Keep all execution flags disabled until the missing controls, tests, and audits are complete.
