@@ -134,12 +134,12 @@ impl BybitClient {
         // The REST endpoint can return the currently forming candle. FMT is
         // close-confirmed, so never pass a bar whose 15-minute interval is open.
         let now = Utc::now();
-        candles.retain(|c| c.open_time + Duration::minutes(15) <= now);
+        candles.retain(|c| c.open_time.clone() + Duration::minutes(15) <= now);
         for candle in &candles {
             candle.validate().map_err(|e| BybitError::InvalidResponse(e.to_string()))?;
         }
         for pair in candles.windows(2) {
-            let gap = pair[1].open_time.signed_duration_since(pair[0].open_time.clone()).num_minutes();
+            let gap = pair[1].open_time.clone().signed_duration_since(pair[0].open_time.clone()).num_minutes();
             if gap != 15 {
                 return Err(BybitError::InvalidResponse(
                     "REST history contains a missing or misaligned M15 candle".into(),
