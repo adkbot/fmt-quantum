@@ -1,0 +1,63 @@
+services:
+  gmx-adapter:
+    build:
+      context: ./services/gmx-adapter
+      dockerfile: Dockerfile
+    environment:
+      GMX_ADAPTER_INTERNAL_KEY: ${GMX_ADAPTER_INTERNAL_KEY}
+      GMX_ADAPTER_HOST: 0.0.0.0
+      GMX_ADAPTER_PORT: 8090
+    restart: unless-stopped
+    networks:
+      - fmt-internal
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.rust
+    command: ["fmt-api"]
+    env_file:
+      - .env
+    environment:
+      API_BIND: 0.0.0.0:8080
+      CORS_ORIGIN: http://localhost:3000
+      GMX_ADAPTER_URL: http://gmx-adapter:8090
+      GMX_ADAPTER_INTERNAL_KEY: ${GMX_ADAPTER_INTERNAL_KEY}
+    depends_on:
+      - gmx-adapter
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    networks:
+      - fmt-internal
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.rust
+    command: ["fmt-worker"]
+    env_file:
+      - .env
+    restart: unless-stopped
+    networks:
+      - fmt-internal
+
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080}
+    depends_on:
+      - api
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    networks:
+      - fmt-internal
+
+networks:
+  fmt-internal:
+    driver: bridge
