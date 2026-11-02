@@ -7,6 +7,7 @@ import { WalletVerificationPanel } from "@/components/wallet-verification-panel"
 import { GmxAccountPanel } from "@/components/gmx-account-panel";
 import { StrategyControlPanel } from "@/components/strategy-control-panel";
 import { StrategyEventsPanel } from "@/components/strategy-events-panel";
+import { BtcMarketChart } from "@/components/btc-market-chart";
 import { arbitrum } from "wagmi/chains";
 
 function shortAddress(address?: string) {
@@ -86,6 +87,8 @@ export default function HomePage() {
           <span className="metric-note">Nenhuma ordem real será enviada nesta fase</span>
         </article>
       </section>
+
+      <BtcMarketChart />
 
       <section className="content-grid">
         <article className="panel strategy-panel">
