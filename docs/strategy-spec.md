@@ -2,7 +2,7 @@
 
 ## Fonte
 
-Indicador Pine Script v5 fornecido pelo usuário. O código original é a referência de comportamento. Esta documentação não autoriza modificar suas regras.
+Esta especificação registra as regras de FMT descritas pelo usuário e confirmadas durante a configuração do projeto. O arquivo literal do Pine Script original ainda não foi localizado na conversa nem na Biblioteca. Portanto, a implementação atual é uma tradução inicial da especificação, não uma paridade comprovada com o código Pine. O arquivo original será necessário para validar equivalência exata; nenhuma regra deve ser alterada silenciosamente.
 
 ## Timeframe de referência confirmado
 
@@ -39,7 +39,7 @@ A acumulação começa no início da janela pré-Tóquio e continua durante a se
 
 A estratégia precisa de candles OHLCV para reproduzir a VWAP. A fonte de referência informada pelo usuário é **`BYBIT:BTCUSDT` no TradingView**, timeframe M15. A API oficial de candles GMX e o método `fetchOhlcv()` do SDK v2 documentam OHLC, mas não volume. Portanto, os cálculos de faixa, sinais e VWAP devem usar candles OHLCV de Bybit correspondentes exatamente ao símbolo confirmado, preservando a mesma fonte para todo o cálculo. A GMX será consultada separadamente para validar preço/oráculo, mercado ativo e execução. Diferenças entre as fontes devem ser medidas e limitadas, não ocultadas. O usuário confirmou que o gráfico é do mercado **perpétuo**. A integração deve usar o mercado linear USDT da Bybit (categoria `linear`) para `BTCUSDT`, intervalo de 15 minutos, e validar que o instrumento está ativo antes de consumir os candles.
 
-## Condição original de compra
+## Condição de compra especificada
 
 Durante a sessão:
 
@@ -48,7 +48,7 @@ Durante a sessão:
 - `close[1] <= close`
 - `close >= sessionVwap`
 
-## Condição original de venda
+## Condição de venda especificada
 
 Durante a sessão:
 
@@ -57,7 +57,7 @@ Durante a sessão:
 - `close[1] >= close`
 - `close <= sessionVwap`
 
-## Saídas originais
+## Condições de saída especificadas
 
 Compra:
 - `high >= preHigh`, ou
@@ -80,11 +80,11 @@ O indicador mantém `emOperacao` e `tipoOperacao`. Ao iniciar a sessão, reinici
 - A faixa pré-sessão só é considerada válida quando os oito candles M15 entre 18:00 e 19:45 estão presentes e contíguos.
 - O primeiro candle de Tóquio usa o fechamento do candle imediatamente anterior (19:45) para reproduzir `close[1]`.
 - A série é rejeitada quando há candles duplicados, fora de ordem ou lacunas M15; é necessário fazer backfill antes de retomar.
-- O motor avalia saída antes de entrada no mesmo candle, permitindo dois eventos sequenciais quando ambas as condições se verificam. Isso continua sujeito ao teste de paridade com o Pine original, não é uma autorização para enviar duas ordens sem a reconciliação de risco.
+- O motor avalia saída antes de entrada no mesmo candle, permitindo dois eventos sequenciais quando ambas as condições se verificam. Isso continua sujeito à comparação com o arquivo Pine original, ainda não localizado; não é autorização para enviar duas ordens sem reconciliação de risco.
 
 ## Critério de paridade
 
-Antes de habilitar execução, criar testes com candles M15 de referência e comparar:
+Antes de habilitar execução, o usuário deverá fornecer o arquivo literal do Pine Script e uma exportação de candles M15 do TradingView. Criar testes de referência e comparar:
 - início/fim de sessão;
 - máxima e mínima pré-sessão;
 - VWAP em cada candle;
