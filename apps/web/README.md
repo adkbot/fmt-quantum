@@ -10,6 +10,7 @@ Initial Next.js dashboard shell for FMT QUANTUM.
 - Supabase email magic-link sign-in.
 - API session verification against the Rust `/v1/me` endpoint.
 - Per-user risk configuration editor backed by `/v1/risk-config`.
+- Per-user FMT monitoring activation backed by `/v1/strategy`; activation requires saved risk limits.
 - On-demand read-only GMX account snapshot for verified Arbitrum wallets.
 - Arbitrum One network detection and switch action.
 - Clear development/offline indicators.
