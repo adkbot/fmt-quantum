@@ -18,7 +18,7 @@ Indicador Pine Script v5 fornecido pelo usuário. O código original é a refer�
 - Sessão chamada Tóquio: `2000-0600`.
 - O uso de `America/New_York` faz o horário acompanhar as mudanças de horário de verão dos EUA. O comentário do script menciona EST, mas o identificador IANA também cobre EDT.
 
-**Pendente de confirmação:** manter exatamente o fuso/horários de Nova York do código ou adaptar as janelas para o horário local de Tóquio. Não converter nem alterar horários silenciosamente.
+**Confirmado pelo usuário:** manter exatamente o fuso e as janelas do código original. A sessão é a sessão asiática/Tóquio identificada pelo indicador, mas seus horários são definidos no fuso `America/New_York`; não converter para o relógio local de Tóquio.
 
 ## Faixa pré-sessão
 
@@ -73,9 +73,8 @@ O indicador mantém `emOperacao` e `tipoOperacao`. Ao iniciar a sessão, reinici
 
 ## Pontos que ainda exigem confirmação
 
-1. Fuso e horário de sessão: manter exatamente New York do script ou adaptar para horário local de Tóquio.
-2. Fonte de preço, candles e volume usada para reproduzir a VWAP e os sinais.
-3. Comportamento esperado quando saída e nova entrada aparecem no mesmo candle.
+1. Fonte de preço, candles e volume usada para reproduzir a VWAP e os sinais.
+2. Comportamento esperado quando saída e nova entrada aparecem no mesmo candle.
 
 ## Critério de paridade
 
