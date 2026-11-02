@@ -109,6 +109,32 @@ create trigger risk_configs_set_updated_at
   for each row execute function public.set_updated_at();
 
 -- ---------------------------------------------------------------------------
+-- Canonical market candles from the confirmed Bybit linear perpetual feed
+-- ---------------------------------------------------------------------------
+
+create table if not exists public.market_candles (
+  id bigint generated always as identity primary key,
+  source_venue text not null default 'BYBIT' check (source_venue = 'BYBIT'),
+  source_category text not null default 'linear' check (source_category = 'linear'),
+  source_symbol text not null default 'BTCUSDT' check (source_symbol = 'BTCUSDT'),
+  timeframe_minutes smallint not null default 15 check (timeframe_minutes = 15),
+  open_time timestamptz not null,
+  open numeric(30, 10) not null,
+  high numeric(30, 10) not null,
+  low numeric(30, 10) not null,
+  close numeric(30, 10) not null,
+  volume numeric(30, 12) not null check (volume >= 0),
+  created_at timestamptz not null default now(),
+  unique (source_venue, source_category, source_symbol, timeframe_minutes, open_time),
+  check (high >= low),
+  check (high >= open and high >= close),
+  check (low <= open and low <= close)
+);
+
+create index if not exists idx_market_candles_symbol_time
+  on public.market_candles(source_symbol, open_time desc);
+
+-- ---------------------------------------------------------------------------
 -- User strategy activation. The trusted API is the only client write path.
 -- ---------------------------------------------------------------------------
 
@@ -220,6 +246,7 @@ create index if not exists idx_audit_events_user_time
 -- ---------------------------------------------------------------------------
 
 alter table public.profiles enable row level security;
+alter table public.market_candles enable row level security;
 alter table public.wallet_connections enable row level security;
 alter table public.wallet_challenges enable row level security;
 alter table public.risk_configs enable row level security;
@@ -228,6 +255,9 @@ alter table public.strategy_events enable row level security;
 alter table public.position_snapshots enable row level security;
 alter table public.execution_attempts enable row level security;
 alter table public.audit_events enable row level security;
+
+create policy "authenticated users can read market candles" on public.market_candles
+  for select to authenticated using (true);
 
 create policy "profile owner can read" on public.profiles
   for select to authenticated using (id = auth.uid());
@@ -271,6 +301,15 @@ begin
          and tablename = 'strategy_events'
      ) then
     execute 'alter publication supabase_realtime add table public.strategy_events';
+  end if;
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime')
+     and not exists (
+       select 1 from pg_publication_tables
+       where pubname = 'supabase_realtime'
+         and schemaname = 'public'
+         and tablename = 'market_candles'
+     ) then
+    execute 'alter publication supabase_realtime add table public.market_candles';
   end if;
 end;
 $$;
