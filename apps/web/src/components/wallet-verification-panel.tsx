@@ -87,6 +87,7 @@ export function WalletVerificationPanel() {
       });
       if (!response.ok) throw new Error(`Não foi possível desvincular a carteira (HTTP ${response.status}).`);
       setVerifiedAddress(null);
+      window.dispatchEvent(new Event("fmt-wallet-unlinked"));
       setMessage("Carteira desvinculada da conta. Isso não revoga permissões on-chain externas.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Falha ao desvincular a carteira.");
