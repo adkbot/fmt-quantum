@@ -579,10 +579,11 @@ async fn verify_wallet_signature(
     let now = Utc::now();
     let now_text = now.to_rfc3339();
     let expires_filter = format!("gt.{}", now_text);
+    let challenge_id_filter = format!("eq.{}", challenge.id);
     let update = json!({"used_at": now_text});
     let consumed = admin_request(&state, state.http.patch(&challenge_url))
         .query(&[
-            ("id", format!("eq.{}", challenge.id).as_str()),
+            ("id", challenge_id_filter.as_str()),
             ("user_id", user_filter.as_str()),
             ("used_at", "is.null"),
             ("expires_at", expires_filter.as_str()),
