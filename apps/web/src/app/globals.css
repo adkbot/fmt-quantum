@@ -117,3 +117,9 @@ footer { display: flex; justify-content: space-between; gap: 16px; color: #66758
 
 .wallet-verification { margin-top: 20px; padding-top: 17px; border-top: 1px solid var(--border); }
 .wallet-verification .button { margin-top: 14px; }
+
+.gmx-account { margin-top: 14px; padding: 22px; border: 1px solid var(--border); border-radius: 11px; background: linear-gradient(145deg, #101822, #0c1219); }
+.gmx-account .button { margin-top: 10px; }
+.gmx-json { margin-top: 16px; border-top: 1px solid var(--border); padding-top: 12px; }
+.gmx-json summary { color: var(--cyan); cursor: pointer; font: 500 10px "DM Mono", monospace; letter-spacing: .08em; }
+.gmx-json pre { max-height: 420px; overflow: auto; margin: 12px 0 0; padding: 14px; border: 1px solid var(--border); border-radius: 8px; background: #070b10; color: #c6d4df; font: 10px/1.6 "DM Mono", monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
