@@ -19,6 +19,7 @@ This is an implementation checklist, not an independent audit or production appr
 - The API proxies GMX account reads only for wallet addresses verified and associated with the authenticated user.
 - No private keys, seed phrases, or delegated signing keys are stored.
 - The selected future execution design is a browser-memory-only GMX subaccount signer; no signer is sent to or persisted by backend services. See `docs/delegated-execution-design.md`.
+- The paper ledger is written only by the server-side worker and exposed to users through read-only RLS. Paper results are gross reference-price changes, not exchange fills.
 
 ## Not yet production-ready
 
