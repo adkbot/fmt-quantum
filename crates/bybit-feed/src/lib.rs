@@ -129,7 +129,7 @@ impl BybitClient {
             .into_iter()
             .map(parse_kline)
             .collect::<Result<Vec<_>, _>>()?;
-        candles.sort_by_key(|c| c.open_time.clone());
+        candles.sort_by_key(|c| c.open_time);
         candles.dedup_by_key(|c| c.open_time.clone());
         // The REST endpoint can return the currently forming candle. FMT is
         // close-confirmed, so never pass a bar whose 15-minute interval is open.
@@ -139,7 +139,7 @@ impl BybitClient {
             candle.validate().map_err(|e| BybitError::InvalidResponse(e.to_string()))?;
         }
         for pair in candles.windows(2) {
-            let gap = pair[1].open_time.clone().signed_duration_since(pair[0].open_time.clone()).num_minutes();
+            let gap = pair[1].open_time.signed_duration_since(pair[0].open_time).num_minutes();
             if gap != 15 {
                 return Err(BybitError::InvalidResponse(
                     "REST history contains a missing or misaligned M15 candle".into(),
@@ -328,7 +328,7 @@ impl BybitKlineStream {
                                 let candle = parse_ws_kline(row)?;
                                 if let Some(last) = last_open_time.as_ref() {
                                     let gap_minutes = candle.open_time
-                                        .signed_duration_since(last.clone())
+                                        .signed_duration_since(*last)
                                         .num_minutes();
                                     if gap_minutes < 0 {
                                         return Err(BybitError::InvalidResponse(
@@ -346,7 +346,7 @@ impl BybitKlineStream {
                                 }
                                 candle.validate()
                                     .map_err(|e| BybitError::InvalidResponse(e.to_string()))?;
-                                last_open_time = Some(candle.open_time.clone());
+                                last_open_time = Some(candle.open_time);
                                 on_closed_candle(candle);
                             }
                         }
