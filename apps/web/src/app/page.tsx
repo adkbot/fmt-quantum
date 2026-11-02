@@ -66,8 +66,8 @@ export default function HomePage() {
       <section className="metrics-grid">
         <article className="panel metric">
           <span className="metric-label">FEED BYBIT</span>
-          <strong className="metric-value">REST + WS</strong>
-          <span className="metric-note">Worker separado; status ainda não transmitido ao painel</span>
+          <strong className="metric-value">WORKER</strong>
+          <span className="metric-note">REST + WS implementado; status de execução não monitorado</span>
         </article>
         <article className="panel metric">
           <span className="metric-label">MOTOR FMT</span>
