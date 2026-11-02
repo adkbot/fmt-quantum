@@ -1,5 +1,5 @@
 use axum::{
-    extract::State,
+    extract::{Query, State},
     http::{header, HeaderMap, HeaderValue, Method, StatusCode},
     routing::{get, post},
     Json, Router,
@@ -22,6 +22,8 @@ struct AppState {
     supabase_url: String,
     supabase_anon_key: String,
     supabase_service_role_key: String,
+    gmx_adapter_url: String,
+    gmx_adapter_internal_key: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -54,6 +56,11 @@ struct WalletChallengeRecord {
     message: String,
     expires_at: String,
     used_at: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct GmxAccountQuery {
+    wallet_address: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -248,6 +255,82 @@ async fn get_wallet_connections(
         .await
         .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
     Ok(Json(rows))
+}
+
+async fn get_gmx_markets(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let _user = authenticate_user(&state, &headers).await?;
+    let url = format!("{}/markets", state.gmx_adapter_url.trim_end_matches('/'));
+    let response = state
+        .http
+        .get(url)
+        .header("x-internal-api-key", &state.gmx_adapter_internal_key)
+        .send()
+        .await
+        .map_err(|_| StatusCode::BAD_GATEWAY)?;
+    if !response.status().is_success() {
+        return Err(StatusCode::BAD_GATEWAY);
+    }
+    let data = response
+        .json::<serde_json::Value>()
+        .await
+        .map_err(|_| StatusCode::BAD_GATEWAY)?;
+    Ok(Json(data))
+}
+
+async fn get_gmx_account(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(query): Query<GmxAccountQuery>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let user = authenticate_user(&state, &headers).await?;
+    let wallet_address = normalize_wallet_address(&query.wallet_address)?;
+    let user_filter = format!("eq.{}", user.id);
+    let address_filter = format!("eq.{}", wallet_address);
+    let chain_filter = format!("eq.{}", GMX_CHAIN_ID);
+    let wallets_url = format!("{}/rest/v1/wallet_connections", state.supabase_url.trim_end_matches('/'));
+    let verified_wallets = admin_request(&state, state.http.get(wallets_url))
+        .query(&[
+            ("select", "wallet_address,chain_id,verified_at"),
+            ("user_id", user_filter.as_str()),
+            ("wallet_address", address_filter.as_str()),
+            ("chain_id", chain_filter.as_str()),
+            ("limit", "1"),
+        ])
+        .send()
+        .await
+        .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?
+        .error_for_status()
+        .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?
+        .json::<Vec<WalletConnectionRecord>>()
+        .await
+        .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
+    if verified_wallets.is_empty() {
+        return Err(StatusCode::FORBIDDEN);
+    }
+
+    let url = format!(
+        "{}/account/{}",
+        state.gmx_adapter_url.trim_end_matches('/'),
+        wallet_address
+    );
+    let response = state
+        .http
+        .get(url)
+        .header("x-internal-api-key", &state.gmx_adapter_internal_key)
+        .send()
+        .await
+        .map_err(|_| StatusCode::BAD_GATEWAY)?;
+    if !response.status().is_success() {
+        return Err(StatusCode::BAD_GATEWAY);
+    }
+    let data = response
+        .json::<serde_json::Value>()
+        .await
+        .map_err(|_| StatusCode::BAD_GATEWAY)?;
+    Ok(Json(data))
 }
 
 async fn create_wallet_challenge(
@@ -449,6 +532,10 @@ async fn main() {
         env::var("SUPABASE_ANON_KEY").expect("SUPABASE_ANON_KEY must be configured");
     let supabase_service_role_key = env::var("SUPABASE_SERVICE_ROLE_KEY")
         .expect("SUPABASE_SERVICE_ROLE_KEY must be configured on the server only");
+    let gmx_adapter_url = env::var("GMX_ADAPTER_URL")
+        .unwrap_or_else(|_| "http://127.0.0.1:8090".to_string());
+    let gmx_adapter_internal_key = env::var("GMX_ADAPTER_INTERNAL_KEY")
+        .expect("GMX_ADAPTER_INTERNAL_KEY must be configured on the server only");
     let bind = env::var("API_BIND").unwrap_or_else(|_| "127.0.0.1:8080".to_string());
     let allowed_origin =
         env::var("CORS_ORIGIN").unwrap_or_else(|_| "http://localhost:3000".to_string());
@@ -460,6 +547,8 @@ async fn main() {
         supabase_url,
         supabase_anon_key,
         supabase_service_role_key,
+        gmx_adapter_url,
+        gmx_adapter_internal_key,
     };
 
     let app = Router::new()
@@ -469,6 +558,8 @@ async fn main() {
             "/v1/risk-config",
             get(get_risk_config).put(put_risk_config),
         )
+        .route("/v1/gmx/markets", get(get_gmx_markets))
+        .route("/v1/gmx/account", get(get_gmx_account))
         .route("/v1/wallets", get(get_wallet_connections))
         .route("/v1/wallet/challenge", post(create_wallet_challenge))
         .route("/v1/wallet/verify", post(verify_wallet_signature))
