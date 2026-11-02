@@ -4,7 +4,7 @@ Plataforma multiusuário para análise e execução automatizada de estratégias
 
 ## Estado do projeto
 
-**Fase:** fundação e especificação técnica.  
+**Fase:** fundação e primeiros módulos de estratégia, dados, risco e leitura GMX.  
 **Rede inicial:** Arbitrum One.  
 **Protocolo inicial:** GMX V2.  
 **Carteira inicial:** MetaMask.  
