@@ -15,15 +15,15 @@ This file separates code that has been authored from code that has actually been
 
 ## Not yet executed or verified
 
-- `cargo fmt`, `cargo test`, and `cargo clippy` have not been run in a Rust toolchain against the current repository head.
-- GMX adapter `npm run typecheck` has not been run.
+- `cargo fmt`, `cargo test`, and `cargo clippy` passed in GitHub Actions on commit `d5fb1e3`; the latest worker changes and current branch head still require a fresh run.
+- GMX adapter `npm run typecheck` has passed in GitHub Actions.\n- Dashboard TypeScript typecheck passed in an earlier CI run, but the Next.js production build failed due optional connector imports; the wallet integration has since been rewritten to use EIP-1193 directly and requires a fresh successful build.
 - Dashboard `npm run typecheck` and `npm run build` have not been run.
 - Docker images and `docker compose up --build` have not been built.
-- Cargo/npm lockfiles have not yet been generated and committed, so dependency versions are not fully reproducible.
+
 - The Supabase migration has not been applied to a live Supabase project.
 - The Bybit feed has not been observed running against a configured environment.
 - The GMX SDK reads have not been verified against a connected Arbitrum wallet.
-- No TradingView/Pine parity run has been completed using exported reference candles.
+- The literal Pine Script source has not yet been located in the conversation or Library; exact parity remains blocked until the user supplies it.\n- No TradingView/Pine parity run has been completed using exported reference candles.
 - No paper-trading or backtest report exists.
 - No independent security audit has been completed.
 
