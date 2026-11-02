@@ -331,6 +331,43 @@ mod tests {
         assert_eq!(local.minute(), 0);
     }
 
+    #[test]
+    fn new_york_timezone_handles_summer_session_open() {
+        let utc = Utc.with_ymd_and_hms(2026, 7, 13, 0, 0, 0).unwrap();
+        let local = utc.with_timezone(&New_York);
+        assert_eq!(local.hour(), 20);
+        assert_eq!(local.minute(), 0);
+    }
+
+    #[test]
+    fn overnight_candles_keep_the_previous_session_anchor() {
+        let mut engine = FmtEngine::new();
+        for index in 0..8 {
+            let total_minutes = index * 15;
+            let hour = 18 + total_minutes / 60;
+            let minute = total_minutes % 60;
+            engine
+                .on_candle(local_candle(hour, minute, 101.0, 99.0, 100.0))
+                .unwrap();
+        }
+        engine.on_candle(local_candle(20, 0, 102.0, 99.0, 101.0)).unwrap();
+
+        let overnight = New_York
+            .with_ymd_and_hms(2026, 1, 13, 1, 0, 0)
+            .unwrap()
+            .with_timezone(&Utc);
+        engine.on_candle(Candle {
+            open_time: overnight,
+            open: 101.0,
+            high: 102.0,
+            low: 100.0,
+            close: 101.0,
+            volume: 10.0,
+        }).unwrap();
+
+        assert_eq!(engine.active_session, Some(NaiveDate::from_ymd_opt(2026, 1, 12).unwrap()));
+    }
+
     fn local_candle(hour: u32, minute: u32, high: f64, low: f64, close: f64) -> Candle {
         let utc = New_York
             .with_ymd_and_hms(2026, 1, 12, hour, minute, 0)
