@@ -26,6 +26,25 @@ struct ActiveStrategy {
     updated_at: DateTime<Utc>,
 }
 
+#[derive(Debug, Clone, Copy)]
+enum EventOrigin {
+    RestBackfill,
+    LiveWebSocket,
+}
+
+impl EventOrigin {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::RestBackfill => "REST_BACKFILL",
+            Self::LiveWebSocket => "LIVE_WEBSOCKET",
+        }
+    }
+
+    fn execution_eligible(self) -> bool {
+        matches!(self, Self::LiveWebSocket)
+    }
+}
+
 enum WorkerMessage {
     CandleAndEvents { candle: Candle, events: Vec<StrategyEvent> },
 }
@@ -106,8 +125,120 @@ impl SupabaseEventStore {
         Ok(())
     }
 
-    async fn persist_event(&self, event: StrategyEvent) -> Result<(), String> {
-        let (event_type, event_time, reference_price, detail) = match event {
+    async fn apply_paper_event(
+        &self,
+        strategy_id: &str,
+        user_id: &str,
+        side: &str,
+        is_entry: bool,
+        price: f64,
+        event_time: DateTime<Utc>,
+        origin: EventOrigin,
+    ) -> Result<(), String> {
+        if !price.is_finite() || price <= 0.0 {
+            return Err("paper event has an invalid reference price".into());
+        }
+
+        let positions_url = format!("{}/rest/v1/paper_positions", self.base_url);
+        let open_positions = self
+            .authenticated_request(self.http.get(positions_url.as_str()))
+            .query(&[
+                ("select", "id,side,entry_price"),
+                ("strategy_instance_id", &format!("eq.{strategy_id}")),
+                ("status", "eq.OPEN"),
+                ("limit", "1"),
+            ])
+            .send()
+            .await
+            .map_err(|error| error.to_string())?
+            .error_for_status()
+            .map_err(|error| error.to_string())?
+            .json::<Vec<Value>>()
+            .await
+            .map_err(|error| error.to_string())?;
+
+        if is_entry {
+            if !open_positions.is_empty() {
+                return Ok(());
+            }
+
+            let row = json!({
+                "user_id": user_id,
+                "strategy_instance_id": strategy_id,
+                "side": side,
+                "entry_price": price,
+                "entry_candle_open_time": event_time.to_rfc3339(),
+                "entry_origin": origin.as_str(),
+                "status": "OPEN"
+            });
+            self.authenticated_request(self.http.post(positions_url.as_str()))
+                .query(&[("on_conflict", "strategy_instance_id,entry_candle_open_time")])
+                .header("Prefer", "resolution=ignore-duplicates,return=minimal")
+                .json(&row)
+                .send()
+                .await
+                .map_err(|error| error.to_string())?
+                .error_for_status()
+                .map_err(|error| error.to_string())?;
+            return Ok(());
+        }
+
+        let Some(open) = open_positions.first() else {
+            return Ok(());
+        };
+        let open_side = open
+            .get("side")
+            .and_then(Value::as_str)
+            .ok_or_else(|| "paper position side is missing".to_string())?;
+        if open_side != side {
+            warn!(
+                strategy_id,
+                open_side,
+                exit_side = side,
+                "Ignoring paper exit whose side does not match the open paper position"
+            );
+            return Ok(());
+        }
+
+        let id = open
+            .get("id")
+            .and_then(Value::as_str)
+            .ok_or_else(|| "paper position id is missing".to_string())?;
+        let entry_price = open
+            .get("entry_price")
+            .and_then(|value| value.as_f64().or_else(|| value.as_str()?.parse().ok()))
+            .ok_or_else(|| "paper position entry price is invalid".to_string())?;
+        let gross_pnl_bps = match side {
+            "BUY" => ((price - entry_price) / entry_price) * 10_000.0,
+            "SELL" => ((entry_price - price) / entry_price) * 10_000.0,
+            _ => return Err("paper position side is invalid".into()),
+        };
+        if !gross_pnl_bps.is_finite() || gross_pnl_bps < i64::MIN as f64 || gross_pnl_bps > i64::MAX as f64 {
+            return Err("paper PnL is outside the supported range".into());
+        }
+
+        let id_filter = format!("eq.{id}");
+        let open_filter = "eq.OPEN";
+        let update = json!({
+            "status": "CLOSED",
+            "exit_price": price,
+            "exit_candle_open_time": event_time.to_rfc3339(),
+            "pnl_bps": gross_pnl_bps.round() as i64
+        });
+        self.authenticated_request(self.http.patch(positions_url.as_str()))
+            .query(&[("id", id_filter.as_str()), ("status", open_filter)])
+            .header("Prefer", "return=minimal")
+            .json(&update)
+            .send()
+            .await
+            .map_err(|error| error.to_string())?
+            .error_for_status()
+            .map_err(|error| error.to_string())?;
+        Ok(())
+    }
+
+    async fn persist_event(&self, event: StrategyEvent, origin: EventOrigin) -> Result<(), String> {
+        let (event_type, event_time, reference_price, side, is_entry, mut detail) = match event {
             StrategyEvent::Enter { side, price, time } => {
                 let event_type = match side {
                     Side::Buy => "ENTER_BUY",
@@ -117,6 +248,8 @@ impl SupabaseEventStore {
                     event_type,
                     time,
                     price,
+                    if side == Side::Buy { "BUY" } else { "SELL" },
+                    true,
                     json!({"side": format!("{side:?}"), "source": "BYBIT", "symbol": "BTCUSDT", "timeframe": "M15"}),
                 )
             }
@@ -129,10 +262,16 @@ impl SupabaseEventStore {
                     event_type,
                     time,
                     price,
+                    if side == Side::Buy { "BUY" } else { "SELL" },
+                    false,
                     json!({"side": format!("{side:?}"), "reason": format!("{reason:?}"), "source": "BYBIT", "symbol": "BTCUSDT", "timeframe": "M15"}),
                 )
             }
         };
+        if let Some(payload) = detail.as_object_mut() {
+            payload.insert("origin".into(), json!(origin.as_str()));
+            payload.insert("execution_eligible".into(), json!(origin.execution_eligible()));
+        }
 
         let strategies_url = format!("{}/rest/v1/strategy_instances", self.base_url);
         let mut strategies = Vec::new();
@@ -199,6 +338,17 @@ impl SupabaseEventStore {
                 .map_err(|error| error.to_string())?
                 .error_for_status()
                 .map_err(|error| error.to_string())?;
+
+            self.apply_paper_event(
+                &strategy.id,
+                &strategy.user_id,
+                side,
+                is_entry,
+                reference_price,
+                event_time,
+                origin,
+            )
+            .await?;
         }
         Ok(())
     }
@@ -218,10 +368,10 @@ async fn persist_candles_with_retry(store: &SupabaseEventStore, candles: &[Candl
     }
 }
 
-async fn persist_event_with_retry(store: &SupabaseEventStore, event: StrategyEvent) {
+async fn persist_event_with_retry(store: &SupabaseEventStore, event: StrategyEvent, origin: EventOrigin) {
     let mut backoff = 1_u64;
     loop {
-        match store.persist_event(event.clone()).await {
+        match store.persist_event(event.clone(), origin).await {
             Ok(()) => return,
             Err(error) => {
                 error!(%error, backoff_seconds = backoff, "FMT event persistence failed; retrying");
@@ -287,10 +437,14 @@ async fn backfill(
         if let Some(store) = store {
             persist_candles_with_retry(store, &candles_for_storage).await;
         }
-        if !events.is_empty() {
+        if let Some(store) = store {
+            for event in events {
+                persist_event_with_retry(store, event, EventOrigin::RestBackfill).await;
+            }
+        } else if !events.is_empty() {
             info!(
                 count = events.len(),
-                "Suppressing historical FMT events during REST backfill; only live WebSocket signals are persisted"
+                "Historical FMT events suppressed because Supabase persistence is not configured"
             );
         }
     }
@@ -379,7 +533,7 @@ async fn main() {
                             (Some(store), WorkerMessage::CandleAndEvents { candle, events }) => {
                                 persist_candles_with_retry(&store, &[candle]).await;
                                 for event in events {
-                                    persist_event_with_retry(&store, event).await;
+                                    persist_event_with_retry(&store, event, EventOrigin::LiveWebSocket).await;
                                 }
                             }
                             (None, _) => {}
