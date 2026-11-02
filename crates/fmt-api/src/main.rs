@@ -1,9 +1,7 @@
 use axum::{
-    body::Body,
-    extract::{Extension, State},
-    http::{header, HeaderValue, Method, Request, StatusCode},
-    middleware::{self, Next},
-    response::{IntoResponse, Response},
+    extract::State,
+    http::{header, HeaderMap, HeaderValue, Method, StatusCode},
+    response::IntoResponse,
     routing::get,
     Json, Router,
 };
@@ -17,12 +15,6 @@ struct AppState {
     http: Client,
     supabase_url: String,
     supabase_anon_key: String,
-}
-
-#[derive(Clone, Debug)]
-struct AuthenticatedUser {
-    id: String,
-    email: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -44,7 +36,7 @@ struct MeResponse {
     email: Option<String>,
 }
 
-async fn health() -> Json<HealthResponse> {
+async fn health(State(_state): State<AppState>) -> Json<HealthResponse> {
     Json(HealthResponse {
         status: "ok",
         service: "fmt-api",
@@ -52,68 +44,57 @@ async fn health() -> Json<HealthResponse> {
     })
 }
 
-async fn me(Extension(user): Extension<AuthenticatedUser>) -> Json<MeResponse> {
-    Json(MeResponse {
-        user_id: user.id,
-        email: user.email,
-    })
-}
-
-async fn authenticate(
+async fn me(
     State(state): State<AppState>,
-    mut request: Request<Body>,
-    next: Next,
-) -> Response {
-    let Some(auth_header) = request.headers().get(header::AUTHORIZATION).cloned() else {
-        return StatusCode::UNAUTHORIZED.into_response();
-    };
-    let Ok(auth_value) = auth_header.to_str() else {
-        return StatusCode::UNAUTHORIZED.into_response();
-    };
-    if !auth_value.starts_with("Bearer ") || auth_value.len() <= 7 {
-        return StatusCode::UNAUTHORIZED.into_response();
-    }
+    headers: HeaderMap,
+) -> Result<Json<MeResponse>, StatusCode> {
+    let auth_header = headers
+        .get(header::AUTHORIZATION)
+        .and_then(|value| value.to_str().ok())
+        .filter(|value| value.starts_with("Bearer ") && value.len() > 7)
+        .ok_or(StatusCode::UNAUTHORIZED)?;
 
-    let response = match state
+    let response = state
         .http
         .get(format!("{}/auth/v1/user", state.supabase_url.trim_end_matches('/')))
         .header("apikey", &state.supabase_anon_key)
-        .header(header::AUTHORIZATION, auth_value)
+        .header(header::AUTHORIZATION, auth_header)
         .send()
         .await
-    {
-        Ok(response) => response,
-        Err(_) => return StatusCode::SERVICE_UNAVAILABLE.into_response(),
-    };
+        .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
 
-    if response.status() == StatusCode::UNAUTHORIZED || response.status() == StatusCode::FORBIDDEN {
-        return StatusCode::UNAUTHORIZED.into_response();
+    if response.status() == StatusCode::UNAUTHORIZED
+        || response.status() == StatusCode::FORBIDDEN
+    {
+        return Err(StatusCode::UNAUTHORIZED);
     }
     if !response.status().is_success() {
-        return StatusCode::SERVICE_UNAVAILABLE.into_response();
+        return Err(StatusCode::SERVICE_UNAVAILABLE);
     }
 
-    let user = match response.json::<SupabaseUser>().await {
-        Ok(user) if !user.id.is_empty() => user,
-        _ => return StatusCode::UNAUTHORIZED.into_response(),
-    };
+    let user = response
+        .json::<SupabaseUser>()
+        .await
+        .map_err(|_| StatusCode::UNAUTHORIZED)?;
+    if user.id.is_empty() {
+        return Err(StatusCode::UNAUTHORIZED);
+    }
 
-    request.extensions_mut().insert(AuthenticatedUser {
-        id: user.id,
+    Ok(Json(MeResponse {
+        user_id: user.id,
         email: user.email,
-    });
-    next.run(request).await
+    }))
 }
 
 #[tokio::main]
 async fn main() {
-    let supabase_url = env::var("SUPABASE_URL")
-        .expect("SUPABASE_URL must be configured");
-    let supabase_anon_key = env::var("SUPABASE_ANON_KEY")
-        .expect("SUPABASE_ANON_KEY must be configured");
+    let supabase_url =
+        env::var("SUPABASE_URL").expect("SUPABASE_URL must be configured");
+    let supabase_anon_key =
+        env::var("SUPABASE_ANON_KEY").expect("SUPABASE_ANON_KEY must be configured");
     let bind = env::var("API_BIND").unwrap_or_else(|_| "127.0.0.1:8080".to_string());
-    let allowed_origin = env::var("CORS_ORIGIN")
-        .unwrap_or_else(|_| "http://localhost:3000".to_string());
+    let allowed_origin =
+        env::var("CORS_ORIGIN").unwrap_or_else(|_| "http://localhost:3000".to_string());
 
     let origin = HeaderValue::from_str(&allowed_origin)
         .expect("CORS_ORIGIN must be a valid origin URL");
@@ -123,13 +104,10 @@ async fn main() {
         supabase_anon_key,
     };
 
-    let protected = Router::new()
-        .route("/v1/me", get(me))
-        .route_layer(middleware::from_fn_with_state(state.clone(), authenticate));
-
     let app = Router::new()
         .route("/health", get(health))
-        .merge(protected)
+        .route("/v1/me", get(me))
+        .with_state(state)
         .layer(
             CorsLayer::new()
                 .allow_origin(AllowOrigin::exact(origin))
