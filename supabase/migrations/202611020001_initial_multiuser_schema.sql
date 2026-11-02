@@ -312,6 +312,8 @@ create policy "risk owner can read" on public.risk_configs
   for select to authenticated using (user_id = auth.uid());
 create policy "strategy owner can read" on public.strategy_instances
   for select to authenticated using (user_id = auth.uid());
+create policy "paper position owner can read" on public.paper_positions
+  for select to authenticated using (user_id = auth.uid());
 create policy "event owner can read" on public.strategy_events
   for select to authenticated using (user_id = auth.uid());
 create policy "position owner can read" on public.position_snapshots
@@ -322,7 +324,7 @@ create policy "audit owner can read" on public.audit_events
   for select to authenticated using (user_id = auth.uid());
 
 -- No authenticated-client write policies for wallet verification, risk limits,
--- strategy activation, events, positions, execution records, or audit events.
+-- strategy activation, events, paper positions, position snapshots, execution records, or audit events.
 -- Trusted server services use the Supabase service-role key and must scope every
 -- write to the authenticated user ID established by Supabase Auth.
 
