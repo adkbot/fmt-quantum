@@ -50,7 +50,7 @@ export function WalletVerificationPanel() {
     let cancelled = false;
     async function loadVerifiedWallets() {
       try {
-        const response = await fetch(`${apiUrl.replace(/\\/$/, "")}/v1/wallets`, {
+        const response = await fetch(`${apiUrl.replace(/\/$/, "")}/v1/wallets`, {
           headers: { Authorization: `Bearer ${accessToken}` }
         });
         if (!response.ok) return;
