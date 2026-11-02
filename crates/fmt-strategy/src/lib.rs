@@ -173,7 +173,7 @@ impl FmtEngine {
                 self.pre_session_sequence_valid = false;
             }
             self.pre_session_bars = self.pre_session_bars.saturating_add(1);
-            self.pre_session_last_time = Some(candle.open_time);
+            self.pre_session_last_time = Some(candle.open_time.clone());
             if self.pre_session_bars == 8 {
                 // The first bar must be 18:00 and all eight M15 bars must be contiguous.
                 self.pre_session_complete = self.pre_session_sequence_valid
@@ -228,7 +228,7 @@ impl FmtEngine {
                     events.push(StrategyEvent::Exit {
                         side,
                         price: candle.close,
-                        time: candle.open_time,
+                        time: candle.open_time.clone(),
                         reason,
                     });
                     self.position = Position::Flat;
@@ -274,7 +274,7 @@ impl FmtEngine {
         // Pine close[1] refers to the immediately preceding chart candle,
         // including the 19:45 pre-session candle on the first Tokyo bar.
         self.previous_close = Some(candle.close);
-        self.last_open_time = Some(candle.open_time);
+        self.last_open_time = Some(candle.open_time.clone());
         Ok(events)
     }
 
