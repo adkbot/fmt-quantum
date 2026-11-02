@@ -71,9 +71,16 @@ Venda:
 
 O indicador mantém `emOperacao` e `tipoOperacao`. Ao iniciar a sessão, reinicia essas variáveis. Em um sistema conectado a uma conta real, esse reset visual jamais pode apagar ou ignorar uma posição existente na GMX. A implementação deve reconciliar o estado on-chain antes de permitir novas ações.
 
-## Pontos que ainda exigem confirmação
+## Sequência exata de estado confirmada no Pine v5
 
-1. Comportamento esperado quando saída e nova entrada aparecem no mesmo candle.
+1. No início da sessão Tóquio, o indicador reinicia apenas seu estado visual `emOperacao` e `tipoOperacao`.
+2. Calcula as condições de saída com o estado que existia antes do candle atual.
+3. Se ocorrer saída, zera o estado.
+4. Avalia a compra; se entrar, marca posição comprada.
+5. Avalia a venda depois da compra. Se compra e venda forem simultaneamente verdadeiras, a compra tem prioridade porque `not emOperacao` já será falso após a compra.
+6. Uma saída pode ser seguida por uma nova entrada no mesmo candle. O motor deve emitir `Exit` antes de `Enter`.
+7. `close[1]` é o fechamento do candle anterior na série do gráfico, inclusive o candle 19:45 para a primeira barra de Tóquio.
+8. A VWAP incorpora o OHLCV do candle atual antes de avaliar sinais e saídas.
 
 ## Guardas já implementadas no motor inicial
 
