@@ -75,6 +75,13 @@ O indicador mantém `emOperacao` e `tipoOperacao`. Ao iniciar a sessão, reinici
 
 1. Comportamento esperado quando saída e nova entrada aparecem no mesmo candle.
 
+## Guardas já implementadas no motor inicial
+
+- A faixa pré-sessão só é considerada válida quando os oito candles M15 entre 18:00 e 19:45 estão presentes e contíguos.
+- O primeiro candle de Tóquio usa o fechamento do candle imediatamente anterior (19:45) para reproduzir `close[1]`.
+- A série é rejeitada quando há candles duplicados, fora de ordem ou lacunas M15; é necessário fazer backfill antes de retomar.
+- O motor avalia saída antes de entrada no mesmo candle, permitindo dois eventos sequenciais quando ambas as condições se verificam. Isso continua sujeito ao teste de paridade com o Pine original, não é uma autorização para enviar duas ordens sem a reconciliação de risco.
+
 ## Critério de paridade
 
 Antes de habilitar execução, criar testes com candles M15 de referência e comparar:
