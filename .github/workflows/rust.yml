@@ -38,6 +38,8 @@ jobs:
             echo "Lockfiles are already up to date."
           else
             git commit -m "chore(deps): commit reproducible lockfiles [skip ci]"
+            git fetch origin clone01
+            git rebase origin/clone01
             git push origin HEAD:clone01
           fi
 
