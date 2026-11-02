@@ -29,6 +29,10 @@ function pnl(value: number | null) {
   return `${percent > 0 ? "+" : ""}${percent.toFixed(2)}%`;
 }
 
+function bps(value: number) {
+  return `${value > 0 ? "+" : ""}${value} bps`;
+}
+
 export function PaperTradingPanel() {
   const [userId, setUserId] = useState<string | null>(null);
   const [positions, setPositions] = useState<PaperPosition[]>([]);
@@ -118,7 +122,7 @@ export function PaperTradingPanel() {
         <div><span>ABERTAS</span><strong>{summary.open}</strong></div>
         <div><span>FECHADAS</span><strong>{summary.closed}</strong></div>
         <div><span>POSITIVAS</span><strong>{summary.wins}</strong></div>
-        <div><span>PNL BRUTO</span><strong className={summary.grossPnl >= 0 ? "positive" : "negative"}>{pnl(summary.grossPnl)}</strong></div>
+        <div><span>SOMA BPS</span><strong className={summary.grossPnl >= 0 ? "positive" : "negative"}>{bps(summary.grossPnl)}</strong></div>
       </div>
       <p className="api-status">{message}</p>
       {positions.length ? (
