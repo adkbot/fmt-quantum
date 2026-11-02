@@ -227,6 +227,43 @@ create trigger execution_attempts_set_updated_at
   before update on public.execution_attempts
   for each row execute function public.set_updated_at();
 
+-- ---------------------------------------------------------------------------
+-- Per-user paper trading ledger (gross PnL only; no fees/slippage/funding)
+-- ---------------------------------------------------------------------------
+
+create table if not exists public.paper_positions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  strategy_instance_id uuid not null references public.strategy_instances(id) on delete cascade,
+  side text not null check (side in ('BUY', 'SELL')),
+  entry_price numeric(30, 10) not null check (entry_price > 0),
+  entry_candle_open_time timestamptz not null,
+  entry_origin text not null check (entry_origin in ('REST_BACKFILL', 'LIVE_WEBSOCKET')),
+  exit_price numeric(30, 10),
+  exit_candle_open_time timestamptz,
+  pnl_bps bigint,
+  status text not null default 'OPEN' check (status in ('OPEN', 'CLOSED')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (strategy_instance_id, entry_candle_open_time),
+  check (
+    (status = 'OPEN' and exit_price is null and exit_candle_open_time is null and pnl_bps is null)
+    or
+    (status = 'CLOSED' and exit_price is not null and exit_candle_open_time is not null and pnl_bps is not null)
+  )
+);
+
+create unique index if not exists idx_paper_positions_one_open_per_strategy
+  on public.paper_positions(strategy_instance_id)
+  where status = 'OPEN';
+
+create index if not exists idx_paper_positions_user_created
+  on public.paper_positions(user_id, created_at desc);
+
+create trigger set_paper_positions_updated_at
+  before update on public.paper_positions
+  for each row execute function public.set_updated_at();
+
 create table if not exists public.audit_events (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references auth.users(id) on delete set null,
@@ -252,6 +289,7 @@ alter table public.wallet_challenges enable row level security;
 alter table public.risk_configs enable row level security;
 alter table public.strategy_instances enable row level security;
 alter table public.strategy_events enable row level security;
+alter table public.paper_positions enable row level security;
 alter table public.position_snapshots enable row level security;
 alter table public.execution_attempts enable row level security;
 alter table public.audit_events enable row level security;
@@ -310,6 +348,15 @@ begin
          and tablename = 'market_candles'
      ) then
     execute 'alter publication supabase_realtime add table public.market_candles';
+  end if;
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime')
+     and not exists (
+       select 1 from pg_publication_tables
+       where pubname = 'supabase_realtime'
+         and schemaname = 'public'
+         and tablename = 'paper_positions'
+     ) then
+    execute 'alter publication supabase_realtime add table public.paper_positions';
   end if;
 end;
 $$;
