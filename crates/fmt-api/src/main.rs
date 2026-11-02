@@ -146,11 +146,11 @@ async fn put_risk_config(
     let record = json!({
         "user_id": user.id,
         "max_open_positions": config.max_open_positions,
-        "max_position_notional_usd": config.max_position_notional_usd,
-        "max_total_exposure_usd": config.max_total_exposure_usd,
-        "max_portfolio_leverage": config.max_portfolio_leverage,
+        "max_position_notional_cents": config.max_position_notional_cents,
+        "max_total_exposure_cents": config.max_total_exposure_cents,
+        "max_portfolio_leverage_bps": config.max_portfolio_leverage_bps,
         "max_price_divergence_bps": config.max_price_divergence_bps,
-        "min_free_collateral_ratio": config.min_free_collateral_ratio
+        "min_free_collateral_bps": config.min_free_collateral_bps
     });
 
     admin_request(&state, state.http.post(url))
