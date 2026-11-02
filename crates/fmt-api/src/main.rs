@@ -434,6 +434,43 @@ async fn get_gmx_account(
     Ok(Json(data))
 }
 
+async fn delete_wallet_connection(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(query): Query<GmxAccountQuery>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let user = authenticate_user(&state, &headers).await?;
+    let wallet_address = normalize_wallet_address(&query.wallet_address)?;
+    let user_filter = format!("eq.{}", user.id);
+    let address_filter = format!("eq.{}", wallet_address);
+    let chain_filter = format!("eq.{}", GMX_CHAIN_ID);
+    let url = format!("{}/rest/v1/wallet_connections", state.supabase_url.trim_end_matches('/'));
+    let deleted = admin_request(&state, state.http.delete(url))
+        .query(&[
+            ("select", "id"),
+            ("user_id", user_filter.as_str()),
+            ("wallet_address", address_filter.as_str()),
+            ("chain_id", chain_filter.as_str()),
+        ])
+        .header("Prefer", "return=representation")
+        .send()
+        .await
+        .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?
+        .error_for_status()
+        .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?
+        .json::<Vec<serde_json::Value>>()
+        .await
+        .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
+    if deleted.is_empty() {
+        return Err(StatusCode::NOT_FOUND);
+    }
+    Ok(Json(json!({
+        "unlinked": true,
+        "wallet_address": wallet_address,
+        "chain_id": GMX_CHAIN_ID
+    })))
+}
+
 async fn create_wallet_challenge(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -667,14 +704,14 @@ async fn main() {
         .route("/v1/strategy", get(get_strategy_instance).put(put_strategy_instance))
         .route("/v1/gmx/markets", get(get_gmx_markets))
         .route("/v1/gmx/account", get(get_gmx_account))
-        .route("/v1/wallets", get(get_wallet_connections))
+        .route("/v1/wallets", get(get_wallet_connections).delete(delete_wallet_connection))
         .route("/v1/wallet/challenge", post(create_wallet_challenge))
         .route("/v1/wallet/verify", post(verify_wallet_signature))
         .with_state(state)
         .layer(
             CorsLayer::new()
                 .allow_origin(AllowOrigin::exact(origin))
-                .allow_methods([Method::GET, Method::PUT, Method::POST])
+                .allow_methods([Method::GET, Method::PUT, Method::POST, Method::DELETE])
                 .allow_headers([header::AUTHORIZATION, header::CONTENT_TYPE]),
         );
 
