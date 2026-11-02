@@ -1,5 +1,6 @@
 use bybit_feed::{BybitClient, BybitKlineStream, Environment};
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Duration, NaiveDateTime, NaiveTime, TimeZone, Timelike, Utc};
+use chrono_tz::America::New_York;
 use fmt_strategy::{Candle, FmtEngine, Side, StrategyEvent};
 use reqwest::Client;
 use serde::Deserialize;
@@ -22,10 +23,30 @@ struct SupabaseEventStore {
 struct ActiveStrategy {
     id: String,
     user_id: String,
+    updated_at: DateTime<Utc>,
 }
 
 enum WorkerMessage {
     CandleAndEvents { candle: Candle, events: Vec<StrategyEvent> },
+}
+
+fn session_start_for_event(event_time: DateTime<Utc>) -> DateTime<Utc> {
+    let local = event_time.with_timezone(&New_York);
+    let date = local.date_naive();
+    let session_date = if local.hour() < 6 {
+        date.pred_opt().expect("valid previous New York calendar date")
+    } else {
+        date
+    };
+    let local_start = NaiveDateTime::new(
+        session_date,
+        NaiveTime::from_hms_opt(20, 0, 0).expect("valid session start time"),
+    );
+    New_York
+        .from_local_datetime(&local_start)
+        .single()
+        .expect("20:00 New York session start is not ambiguous")
+        .with_timezone(&Utc)
 }
 
 impl SupabaseEventStore {
@@ -121,7 +142,7 @@ impl SupabaseEventStore {
             let page = self
                 .authenticated_request(self.http.get(strategies_url.as_str()))
                 .query(&[
-                    ("select", "id,user_id"),
+                    ("select", "id,user_id,updated_at"),
                     ("is_enabled", "eq.true"),
                     ("strategy_code", "eq.FMT_TOKYO_M15"),
                     ("source_symbol", "eq.BTCUSDT"),
@@ -151,7 +172,13 @@ impl SupabaseEventStore {
         }
 
         let events_url = format!("{}/rest/v1/strategy_events", self.base_url);
+        let session_start = session_start_for_event(event_time);
         for strategy in strategies {
+            // A strategy enabled or re-enabled after the current session began
+            // joins on the next session, preventing orphan exit signals.
+            if strategy.updated_at > session_start {
+                continue;
+            }
             let row: Value = json!({
                 "user_id": strategy.user_id,
                 "strategy_instance_id": strategy.id,
