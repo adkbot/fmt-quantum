@@ -161,7 +161,6 @@ impl FmtEngine {
             if self.active_session != Some(session_date) {
                 self.active_session = Some(session_date);
                 self.position = Position::Flat;
-                self.previous_close = None;
                 if self.vwap_date != Some(session_date) {
                     // Missing pre-session data must not silently reuse the prior day.
                     self.vwap_date = Some(session_date);
@@ -233,14 +232,14 @@ impl FmtEngine {
                 }
             }
         } else if minute_of_day >= 6 * 60 && minute_of_day < 18 * 60 {
+            // The Pine indicator only resets its logical position at the next
+            // Tokyo-session start; do not clear it at the 06:00 session end.
             self.active_session = None;
-            self.position = Position::Flat;
-            self.previous_close = None;
         }
 
-        if in_tokyo {
-            self.previous_close = Some(candle.close);
-        }
+        // Pine close[1] refers to the immediately preceding chart candle,
+        // including the 19:45 pre-session candle on the first Tokyo bar.
+        self.previous_close = Some(candle.close);
         self.last_open_time = Some(candle.open_time);
         Ok(events)
     }
