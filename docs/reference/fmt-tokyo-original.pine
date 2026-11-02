@@ -1,0 +1,108 @@
+//@version=5
+indicator("Estratégia Ásia / Tóquio - FMT (Livre e Blindado)", overlay=true, max_lines_count=500, max_labels_count=500)
+
+// ==========================================
+// CONFIGURAÇÕES DE HORÁRIOS (Horário de NY / EST)
+// ==========================================
+g_sess      = "Configurações de Sessão"
+timeZone    = input.string("America/New_York", "Fuso Horário", group=g_sess)
+preAsiaTime = input.string("1800-2000", "Período Pré-Tóquio", group=g_sess)
+tokyoOpen   = input.string("2000-0600", "Sessão de Tóquio", group=g_sess)
+
+// Configuração de Cores e Estilos
+g_style     = "Estilo das Linhas"
+colMax      = input.color(color.red, "Máxima Pré-Tóquio", group=g_style)
+colMin      = input.color(color.green, "Mínima Pré-Tóquio", group=g_style)
+colVwap     = input.color(color.orange, "VWAP da Sessão", group=g_style)
+lineWidth   = input.int(2, "Espessura das Linhas", minval=1, maxval=4, group=g_style)
+
+// ==========================================
+// LÓGICA DA FAIXA PRÉ-TÓQUIO (18:00 - 20:00 NY)
+// ==========================================
+inPreAsia = not na(time(timeframe.period, preAsiaTime, timeZone))
+inTokyo   = not na(time(timeframe.period, tokyoOpen, timeZone))
+
+var float preHigh = na
+var float preLow  = na
+var line lineHigh = na
+var line lineLow  = na
+
+isPreAsiaStart = inPreAsia and not inPreAsia[1]
+
+if isPreAsiaStart
+    preHigh := high
+    preLow  := low
+else if inPreAsia
+    preHigh := math.max(preHigh, high)
+    preLow  := math.min(preLow, low)
+
+isTokyoStart = inTokyo and not inTokyo[1]
+
+if isTokyoStart
+    lineHigh := line.new(bar_index - 1, preHigh, bar_index + 1, preHigh, color=colMax, width=lineWidth, style=line.style_solid)
+    label.new(bar_index, preHigh, "Máxima Pré-Tóquio", color=color.new(color.red, 100), textcolor=colMax, style=label.style_label_down, size=size.small)
+
+    lineLow := line.new(bar_index - 1, preLow, bar_index + 1, preLow, color=colMin, width=lineWidth, style=line.style_solid)
+    label.new(bar_index, preLow, "Mínima Pré-Tóquio", color=color.new(color.green, 100), textcolor=colMin, style=label.style_label_up, size=size.small)
+
+if inTokyo
+    line.set_x2(lineHigh, bar_index)
+    line.set_x2(lineLow, bar_index)
+
+// ==========================================
+// ANCORAGEM DA VWAP DA SESSÃO
+// ==========================================
+var float vwapSumSrcVol = 0.0
+var float vwapSumVol    = 0.0
+
+if isPreAsiaStart
+    vwapSumSrcVol := hlc3 * volume
+    vwapSumVol    := volume
+else if inPreAsia or inTokyo
+    vwapSumSrcVol += hlc3 * volume
+    vwapSumVol    += volume
+
+sessionVwap = vwapSumVol > 0 ? vwapSumSrcVol / vwapSumVol : na
+plot(inPreAsia or inTokyo ? sessionVwap : na, title="VWAP da Sessão", color=colVwap, linewidth=2)
+
+// ==========================================
+// DETECÇÃO DE ENTRADAS (Livre para reverter)
+// ==========================================
+var bool emOperacao   = false
+var int  tipoOperacao = 0
+
+if isTokyoStart
+    emOperacao   := false
+    tipoOperacao := 0
+
+// Condições com Blindagem VWAP, permitindo novos ciclos na mesma sessão
+toqueMinima = inTokyo and (low <= preLow) and (close > preLow) and (close[1] <= close) and (close >= sessionVwap)
+toqueMaxima = inTokyo and (high >= preHigh) and (close < preHigh) and (close[1] >= close) and (close <= sessionVwap)
+
+// Condição de Saída (X) quando atinge o lado oposto ou cruza a VWAP
+saidaCompra = emOperacao and tipoOperacao == 1 and (high >= preHigh or close < sessionVwap)
+saidaVenda  = emOperacao and tipoOperacao == -1 and (low <= preLow or close > sessionVwap)
+
+pontoSaida = (saidaCompra or saidaVenda) and emOperacao
+if pontoSaida
+    emOperacao   := false
+    tipoOperacao := 0
+
+// Disparo de Compra
+if toqueMinima and not emOperacao
+    emOperacao   := true
+    tipoOperacao := 1
+
+// Disparo de Venda
+if toqueMaxima and not emOperacao
+    emOperacao   := true
+    tipoOperacao := -1
+
+// Efeito visual piscando
+corCompraPiscando = (bar_index % 2 == 0) ? color.new(color.green, 10) : color.new(color.green, 50)
+corVendaPiscando  = (bar_index % 2 == 0) ? color.new(color.red, 10) : color.new(color.red, 50)
+
+// Plotagem
+plotshape(toqueMinima and not emOperacao[1], title="Entrada Compra Blindada", style=shape.triangleup, location=location.belowbar, color=corCompraPiscando, size=size.tiny, text="C", textcolor=corCompraPiscando)
+plotshape(toqueMaxima and not emOperacao[1], title="Entrada Venda Blindada", style=shape.triangledown, location=location.abovebar, color=corVendaPiscando, size=size.tiny, text="V", textcolor=corVendaPiscando)
+plotshape(pontoSaida, title="Saída da Pernada (X)", style=shape.circle, location=location.abovebar, color=color.new(color.gray, 30), size=size.tiny, text="X", textcolor=color.new(color.white, 20))
