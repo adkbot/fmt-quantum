@@ -1,0 +1,32 @@
+# Secrets and environment
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+credentials/
+
+# Node
+node_modules/
+.next/
+out/
+dist/
+coverage/
+
+# Rust
+target/
+Cargo.lock.tmp
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs and local data
+*.log
+*.sqlite
+*.db
+tmp/
+.cache/
