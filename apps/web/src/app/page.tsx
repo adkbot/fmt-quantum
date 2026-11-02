@@ -1,6 +1,6 @@
 "use client";
 
-import { useAccount, useConnect, useDisconnect, useSwitchChain } from "wagmi";
+import { useWallet } from "@/lib/wallet-context";
 import { AuthPanel } from "@/components/auth-panel";
 import { RiskConfigPanel } from "@/components/risk-config-panel";
 import { WalletVerificationPanel } from "@/components/wallet-verification-panel";
@@ -8,7 +8,6 @@ import { GmxAccountPanel } from "@/components/gmx-account-panel";
 import { StrategyControlPanel } from "@/components/strategy-control-panel";
 import { StrategyEventsPanel } from "@/components/strategy-events-panel";
 import { BtcMarketChart } from "@/components/btc-market-chart";
-import { arbitrum } from "wagmi/chains";
 
 function shortAddress(address?: string) {
   if (!address) return "";
@@ -16,11 +15,8 @@ function shortAddress(address?: string) {
 }
 
 export default function HomePage() {
-  const { address, chainId, isConnected } = useAccount();
-  const { connect, connectors, isPending } = useConnect();
-  const { disconnect } = useDisconnect();
-  const { switchChain, isPending: isSwitching } = useSwitchChain();
-  const wrongNetwork = isConnected && chainId !== arbitrum.id;
+  const { address, chainId, isConnected, isConnecting, connect, disconnect, switchChain } = useWallet();
+  const wrongNetwork = isConnected && chainId !== 42161;
 
   return (
     <main className="shell">
@@ -38,8 +34,8 @@ export default function HomePage() {
             <div className="wallet-actions">
               <span className="wallet-address">{shortAddress(address)}</span>
               {wrongNetwork ? (
-                <button className="button primary" onClick={() => switchChain?.({ chainId: arbitrum.id })} disabled={isSwitching || !switchChain}>
-                  {isSwitching ? "TROCANDO..." : "MUDAR REDE"}
+                <button className="button primary" onClick={() => void switchChain(42161).catch(() => {})} disabled={false}>
+                  {"MUDAR REDE"}
                 </button>
               ) : null}
               <button className="button secondary" onClick={() => disconnect()}>DESCONECTAR</button>
@@ -47,10 +43,10 @@ export default function HomePage() {
           ) : (
             <button
               className="button primary"
-              disabled={isPending || connectors.length === 0}
-              onClick={() => connectors[0] && connect({ connector: connectors[0] })}
+              disabled={isConnecting}
+              onClick={() => void connect().catch(() => {})}
             >
-              {isPending ? "CONECTANDO..." : "CONECTAR METAMASK"}
+              {isConnecting ? "CONECTANDO..." : "CONECTAR METAMASK"}
             </button>
           )}
         </div>
