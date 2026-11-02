@@ -135,8 +135,8 @@ impl FmtEngine {
     /// Process one completed M15 candle. Call exactly once per candle.
     pub fn on_candle(&mut self, candle: Candle) -> Result<Vec<StrategyEvent>, StrategyError> {
         candle.validate()?;
-        if let Some(last) = self.last_open_time {
-            let gap_minutes = candle.open_time.signed_duration_since(last).num_minutes();
+        if let Some(last) = self.last_open_time.as_ref() {
+            let gap_minutes = candle.open_time.signed_duration_since(last.clone()).num_minutes();
             if gap_minutes <= 0 {
                 return Err(StrategyError::OutOfOrderCandle);
             }
@@ -167,7 +167,8 @@ impl FmtEngine {
                 self.vwap_volume = 0.0;
             }
             let contiguous = self.pre_session_last_time
-                .map_or(true, |last| candle.open_time.signed_duration_since(last).num_minutes() == 15);
+                .as_ref()
+                .map_or(true, |last| candle.open_time.signed_duration_since(last.clone()).num_minutes() == 15);
             if (self.pre_session_bars == 0 && minute_of_day != 18 * 60) || !contiguous {
                 self.pre_session_sequence_valid = false;
             }
