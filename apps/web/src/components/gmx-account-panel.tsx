@@ -5,7 +5,7 @@ import { useWallet } from "@/lib/wallet-context";
 import { supabase } from "@/lib/supabase";
 
 export function GmxAccountPanel() {
-  const { address, chainId, isConnected } = useAccount();
+  const { address, chainId, isConnected } = useWallet();
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [snapshot, setSnapshot] = useState<unknown>(null);
   const [loading, setLoading] = useState(false);
@@ -67,7 +67,7 @@ export function GmxAccountPanel() {
     }
   }
 
-  const disabled = !isConnected || !address || chainId !== arbitrum.id || !accessToken || loading;
+  const disabled = !isConnected || !address || chainId !== 42161 || !accessToken || loading;
 
   return (
     <section className="gmx-account">
