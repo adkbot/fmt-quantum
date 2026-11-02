@@ -11,6 +11,7 @@ Initial Rust HTTP API service.
 - `PUT /v1/strategy`: enables/disables that user's monitoring instance. Enabling requires a saved risk configuration.
 - `PUT /v1/risk-config`: validates and upserts the authenticated user's risk limits; the maximum open-position count is hard-capped at 8.
 - `GET /v1/wallets`: lists the authenticated user's verified wallet addresses.
+- `DELETE /v1/wallets?wallet_address=...`: unlinks one verified wallet association owned by the authenticated user; it does not revoke any on-chain authorization.
 - `GET /v1/gmx/markets`: proxies the GMX V2 market catalog to an authenticated user.
 - `GET /v1/gmx/account?wallet_address=...`: proxies account positions/orders/balances only when the address is verified and linked to that user.
 - `POST /v1/wallet/challenge`: creates a random, five-minute, one-time EIP-191 wallet ownership challenge for Arbitrum One.
