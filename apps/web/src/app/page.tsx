@@ -32,7 +32,7 @@ export default function HomePage() {
             <div className="wallet-actions">
               <span className="wallet-address">{shortAddress(address)}</span>
               {wrongNetwork ? (
-                <button className="button primary" onClick={() => switchChain({ chainId: arbitrum.id })} disabled={isSwitching}>
+                <button className="button primary" onClick={() => switchChain?.({ chainId: arbitrum.id })} disabled={isSwitching || !switchChain}>
                   {isSwitching ? "TROCANDO..." : "MUDAR REDE"}
                 </button>
               ) : null}
