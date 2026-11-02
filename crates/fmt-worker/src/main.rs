@@ -227,18 +227,6 @@ fn process_candles(
     Ok(emitted)
 }
 
-async fn persist_events(store: Option<&SupabaseEventStore>, events: Vec<StrategyEvent>) {
-    let Some(store) = store else {
-        if !events.is_empty() {
-            warn!("Supabase event persistence is not configured; events exist only in logs");
-        }
-        return;
-    };
-    for event in events {
-        persist_event_with_retry(store, event).await;
-    }
-}
-
 async fn backfill(
     client: &BybitClient,
     engine: &mut FmtEngine,
