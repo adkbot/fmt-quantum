@@ -183,6 +183,8 @@ create policy "audit owner can read" on public.audit_events
 
 create index if not exists idx_wallet_challenges_user_nonce
   on public.wallet_challenges(user_id, nonce);
+create index if not exists idx_wallet_challenges_expiry
+  on public.wallet_challenges(expires_at);
 
 create table if not exists public.risk_configs (
   user_id uuid primary key references auth.users(id) on delete cascade,
