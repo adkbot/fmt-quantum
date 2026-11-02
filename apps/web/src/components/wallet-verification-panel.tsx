@@ -52,18 +52,20 @@ export function WalletVerificationPanel() {
     if (!accessToken || !address || chainId !== arbitrum.id) return;
     const apiUrl = process.env.NEXT_PUBLIC_API_URL;
     if (!apiUrl) return;
+    const baseUrl = apiUrl.replace(/\/$/, "");
+    const connectedAddress = address;
 
     let cancelled = false;
     async function loadVerifiedWallets() {
       try {
-        const response = await fetch(`${apiUrl.replace(/\/$/, "")}/v1/wallets`, {
+        const response = await fetch(`${baseUrl}/v1/wallets`, {
           headers: { Authorization: `Bearer ${accessToken}` }
         });
         if (!response.ok) return;
         const wallets = (await response.json()) as WalletConnection[];
         const match = wallets.find((wallet) =>
           wallet.chain_id === arbitrum.id &&
-          wallet.wallet_address.toLowerCase() === address.toLowerCase()
+          wallet.wallet_address.toLowerCase() === connectedAddress.toLowerCase()
         );
         if (!cancelled) setVerifiedAddress(match?.wallet_address ?? null);
       } catch {
@@ -85,7 +87,7 @@ export function WalletVerificationPanel() {
     }
     setBusy(true);
     try {
-      const url = new URL(`${apiUrl.replace(/\/$/, "")}/v1/wallets`);
+      const url = new URL(`${baseUrl}/v1/wallets`);
       url.searchParams.set("wallet_address", verifiedAddress);
       const response = await fetch(url, {
         method: "DELETE",
