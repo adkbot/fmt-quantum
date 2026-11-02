@@ -4,6 +4,13 @@
 
 Indicador Pine Script v5 fornecido pelo usuário. O código original é a referência de comportamento. Esta documentação não autoriza modificar suas regras.
 
+## Timeframe de referência confirmado
+
+- **M15 (15 minutos)** é o timeframe oficial informado pelo usuário.
+- A implementação deverá calcular sessões, níveis, VWAP, sinais e saídas sobre candles M15.
+- Como padrão inicial de segurança, os sinais serão confirmados no fechamento do candle M15. Não haverá execução intrabar sem aprovação explícita do usuário.
+- O candle anterior usado em `close[1]` será o candle M15 imediatamente anterior na série de referência.
+
 ## Sessões configuradas no script
 
 - Fuso horário configurável: `America/New_York`.
@@ -11,7 +18,7 @@ Indicador Pine Script v5 fornecido pelo usuário. O código original é a refer�
 - Sessão chamada Tóquio: `2000-0600`.
 - O uso de `America/New_York` faz o horário acompanhar as mudanças de horário de verão dos EUA. O comentário do script menciona EST, mas o identificador IANA também cobre EDT.
 
-A definição final do fuso e dos horários precisa ser confirmada antes da implementação.
+**Pendente de confirmação:** manter exatamente o fuso/horários de Nova York do código ou adaptar as janelas para o horário local de Tóquio. Não converter nem alterar horários silenciosamente.
 
 ## Faixa pré-sessão
 
@@ -64,17 +71,15 @@ Venda:
 
 O indicador mantém `emOperacao` e `tipoOperacao`. Ao iniciar a sessão, reinicia essas variáveis. Em um sistema conectado a uma conta real, esse reset visual jamais pode apagar ou ignorar uma posição existente na GMX. A implementação deve reconciliar o estado on-chain antes de permitir novas ações.
 
-## Pontos que exigem confirmação
+## Pontos que ainda exigem confirmação
 
-1. Timeframe do gráfico TradingView usado como referência.
-2. Fuso e horário de sessão desejados: manter exatamente New York do script ou adaptar para horário local de Tóquio.
-3. Se os sinais devem ser confirmados apenas no fechamento do candle ou avaliados intrabar.
-4. Fonte de preço, candles e volume usada para reproduzir a VWAP e os sinais.
-5. Comportamento esperado quando saída e nova entrada aparecem no mesmo candle.
+1. Fuso e horário de sessão: manter exatamente New York do script ou adaptar para horário local de Tóquio.
+2. Fonte de preço, candles e volume usada para reproduzir a VWAP e os sinais.
+3. Comportamento esperado quando saída e nova entrada aparecem no mesmo candle.
 
 ## Critério de paridade
 
-Antes de habilitar execução, criar testes com candles de referência e comparar:
+Antes de habilitar execução, criar testes com candles M15 de referência e comparar:
 - início/fim de sessão;
 - máxima e mínima pré-sessão;
 - VWAP em cada candle;
