@@ -5,7 +5,6 @@ import {
   CandlestickSeries,
   createChart,
   type CandlestickData,
-  type ISeriesApi,
   type Time,
   type UTCTimestamp
 } from "lightweight-charts";
@@ -42,7 +41,6 @@ function newYorkTime(time: Time) {
 
 export function BtcMarketChart() {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
   const latestTimeRef = useRef<number | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [message, setMessage] = useState("Entre na conta para carregar o histórico M15.");
@@ -97,7 +95,6 @@ export function BtcMarketChart() {
       wickUpColor: "#26A69A",
       wickDownColor: "#EF5350"
     });
-    seriesRef.current = series;
 
     let cancelled = false;
     let loaded = false;
@@ -192,7 +189,6 @@ export function BtcMarketChart() {
       cancelled = true;
       void supabase.removeChannel(channel);
       observer.disconnect();
-      seriesRef.current = null;
       chart.remove();
     };
   }, [userId]);
