@@ -252,7 +252,7 @@ impl FmtEngine {
                         events.push(StrategyEvent::Enter {
                             side: Side::Buy,
                             price: candle.close,
-                            time: candle.open_time.clone(),
+                            time: candle.open_time,
                         });
                         self.position = Position::Open(Side::Buy);
                     } else if sell {
@@ -274,7 +274,7 @@ impl FmtEngine {
         // Pine close[1] refers to the immediately preceding chart candle,
         // including the 19:45 pre-session candle on the first Tokyo bar.
         self.previous_close = Some(candle.close);
-        self.last_open_time = Some(candle.open_time.clone());
+        self.last_open_time = Some(candle.open_time);
         Ok(events)
     }
 
