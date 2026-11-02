@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useAccount } from "wagmi";
-import { arbitrum } from "wagmi/chains";
+import { useWallet } from "@/lib/wallet-context";
 import { supabase } from "@/lib/supabase";
 
 export function GmxAccountPanel() {
@@ -38,7 +37,7 @@ export function GmxAccountPanel() {
   }, []);
 
   async function loadAccount() {
-    if (!isConnected || !address || chainId !== arbitrum.id || !accessToken) return;
+    if (!isConnected || !address || chainId !== 42161 || !accessToken) return;
     const apiUrl = process.env.NEXT_PUBLIC_API_URL;
     if (!apiUrl) {
       setMessage("API não configurada.");
