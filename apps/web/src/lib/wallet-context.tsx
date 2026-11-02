@@ -29,6 +29,7 @@ type WalletContextValue = {
   isConnected: boolean;
   isConnecting: boolean;
   isSigning: boolean;
+  error: string | null;
   connect: () => Promise<void>;
   disconnect: () => Promise<void>;
   switchChain: (chainId: number) => Promise<void>;
@@ -46,6 +47,16 @@ function parseChainId(value: unknown): number | undefined {
   }
 }
 
+function errorCode(error: unknown): number | undefined {
+  if (typeof error !== "object" || error === null || !("code" in error)) return undefined;
+  const code = (error as { code?: unknown }).code;
+  return typeof code === "number" ? code : undefined;
+}
+
+function errorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Falha na comunicação com a carteira.";
+}
+
 function isAddress(value: unknown): value is Address {
   return typeof value === "string" && /^0x[a-fA-F0-9]{40}$/.test(value);
 }
@@ -55,6 +66,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [chainId, setChainId] = useState<number | undefined>();
   const [isConnecting, setIsConnecting] = useState(false);
   const [isSigning, setIsSigning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const syncWallet = useCallback(async (provider: Eip1193Provider) => {
     const [accounts, chain] = await Promise.all([
@@ -100,6 +112,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const connect = useCallback(async () => {
     const provider = window.ethereum;
     if (!provider) throw new Error("MetaMask não foi encontrada neste navegador.");
+    setError(null);
     setIsConnecting(true);
     try {
       const accounts = await provider.request({ method: "eth_requestAccounts" });
@@ -108,6 +121,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       if (!isAddress(firstAccount)) throw new Error("A carteira não retornou um endereço válido.");
       setAddress(firstAccount);
       setChainId(parseChainId(chain));
+    } catch (caught) {
+      setError(errorMessage(caught));
+      throw caught;
     } finally {
       setIsConnecting(false);
     }
@@ -115,33 +131,66 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   const disconnect = useCallback(async () => {
     const provider = window.ethereum;
-    if (provider) {
-      try {
-        await provider.request({
-          method: "wallet_revokePermissions",
-          params: [{ eth_accounts: {} }]
-        });
-      } catch {
-        // Some injected wallets do not implement EIP-2255 permission revocation.
-      }
+    setError(null);
+    if (!provider) {
+      setAddress(undefined);
+      setChainId(undefined);
+      return;
     }
-    setAddress(undefined);
-    setChainId(undefined);
+    try {
+      await provider.request({
+        method: "wallet_revokePermissions",
+        params: [{ eth_accounts: {} }]
+      });
+      setAddress(undefined);
+      setChainId(undefined);
+    } catch {
+      setError("Este provedor não oferece desconexão programática. Revogue o acesso nas conexões da MetaMask.");
+    }
   }, []);
 
   const switchChain = useCallback(async (nextChainId: number) => {
     const provider = window.ethereum;
     if (!provider) throw new Error("MetaMask não foi encontrada.");
-    await provider.request({
-      method: "wallet_switchEthereumChain",
-      params: [{ chainId: `0x${nextChainId.toString(16)}` }]
-    });
+    const chainIdHex = `0x${nextChainId.toString(16)}`;
+    setError(null);
+    try {
+      await provider.request({
+        method: "wallet_switchEthereumChain",
+        params: [{ chainId: chainIdHex }]
+      });
+    } catch (caught) {
+      if (errorCode(caught) !== 4902 || nextChainId !== 42161) {
+        setError(errorMessage(caught));
+        throw caught;
+      }
+      try {
+        await provider.request({
+          method: "wallet_addEthereumChain",
+          params: [{
+            chainId: "0xa4b1",
+            chainName: "Arbitrum One",
+            nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+            rpcUrls: ["https://arb1.arbitrum.io/rpc"],
+            blockExplorerUrls: ["https://arbiscan.io"]
+          }]
+        });
+        await provider.request({
+          method: "wallet_switchEthereumChain",
+          params: [{ chainId: "0xa4b1" }]
+        });
+      } catch (addError) {
+        setError(errorMessage(addError));
+        throw addError;
+      }
+    }
     setChainId(nextChainId);
   }, []);
 
   const signMessageAsync = useCallback(async (message: string) => {
     const provider = window.ethereum;
     if (!provider || !address) throw new Error("Conecte a MetaMask antes de assinar.");
+    setError(null);
     setIsSigning(true);
     try {
       const signature = await provider.request({
@@ -152,6 +201,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         throw new Error("A carteira retornou uma assinatura inválida.");
       }
       return signature;
+    } catch (caught) {
+      setError(errorMessage(caught));
+      throw caught;
     } finally {
       setIsSigning(false);
     }
@@ -163,11 +215,12 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     isConnected: Boolean(address),
     isConnecting,
     isSigning,
+    error,
     connect,
     disconnect,
     switchChain,
     signMessageAsync
-  }), [address, chainId, isConnecting, isSigning, connect, disconnect, switchChain, signMessageAsync]);
+  }), [address, chainId, isConnecting, isSigning, error, connect, disconnect, switchChain, signMessageAsync]);
 
   return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;
 }
