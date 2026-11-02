@@ -35,9 +35,9 @@ O SDK oficial da GMX é TypeScript. A arquitetura prevê um adaptador TypeScript
 - O endpoint oficial de candles da Oracle API GMX oferece intervalos incluindo 15m, mas seu formato documentado é OHLC: timestamp, open, high, low e close. Não inclui volume.
 - O método `GmxApiSdk.fetchOhlcv()` do SDK v2 também documenta candles com timestamp e OHLC, sem campo de volume.
 - Como a VWAP original do Pine usa `hlc3 * volume`, não calcular nem rotular como VWAP fiel usando candles GMX sem volume.
-- Para preservar a estratégia, usar uma única fonte OHLCV identificada para todos os cálculos do indicador (candles, níveis e VWAP). Fonte confirmada: Bybit, símbolo informado no TradingView `BYBIT:BTCUSDT`, timeframe M15. Antes da integração, confirmar se o ticker representa spot ou perpétuo linear e selecionar o endpoint de candles correspondente.
+- Para preservar a estratégia, usar uma única fonte OHLCV identificada para todos os cálculos do indicador (candles, níveis e VWAP). Fonte confirmada: Bybit, `BTCUSDT` perpétuo linear (categoria `linear`), timeframe M15. A integração deve validar o instrumento e consumir o endpoint de klines da categoria linear.
 - Consultar em paralelo os preços/oráculos e as condições do mercado GMX para validar se a ordem pode ser executada. Divergências entre fonte do sinal e preço GMX devem ser medidas, limitadas e registradas; nunca escondidas.
-- A fonte e o ticker foram informados pelo usuário; resta validar o tipo de mercado (spot ou perpétuo) associado ao ticker TradingView antes de conectar a API.
+- A fonte, ticker e tipo de mercado foram confirmados pelo usuário.
 
 ## Fluxo de sinal e execução
 
