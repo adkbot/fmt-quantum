@@ -21,7 +21,7 @@ First operational worker prototype for the confirmed Bybit M15 data stream.
 
 ## Important limitations
 
-- Supabase writes use the service-role REST API. Failed writes are logged; the next 48-hour warm-up can replay recent candles and idempotent signal events, but there is no durable queue or dead-letter queue.
+- Supabase writes use the service-role REST API and retry with exponential backoff while the worker process remains alive. A bounded in-memory queue applies backpressure. There is no durable queue or dead-letter queue; after a restart, recent candles are replayed to rebuild state, but historical signals are intentionally suppressed.
 - Multi-user event fan-out is implemented; per-user worker isolation and independent strategy parameter sets are not.
 - Reconnect/backfill is a first pass; production deployment still needs supervised process restarts, alerting, durable checkpoints, rate-limit handling, and load tests.
 - There is no GMX execution path in this worker.
