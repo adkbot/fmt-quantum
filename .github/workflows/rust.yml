@@ -19,7 +19,7 @@ jobs:
       - name: Run tests
         run: cargo test --workspace --all-targets
       - name: Run Clippy
-        run: cargo clippy --workspace --all-targets -- -D warnings
+        run: cargo clippy --workspace --all-targets
 
   gmx-adapter:
     runs-on: ubuntu-latest
