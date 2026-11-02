@@ -75,7 +75,7 @@ impl SupabaseEventStore {
         loop {
             let range = format!("{}-{}", offset, offset + 999);
             let page = self
-                .authenticated_request(self.http.get(&strategies_url))
+                .authenticated_request(self.http.get(strategies_url.as_str()))
                 .query(&[
                     ("select", "id,user_id"),
                     ("is_enabled", "eq.true"),
@@ -116,7 +116,7 @@ impl SupabaseEventStore {
                 "reference_price": reference_price,
                 "payload": detail.clone(),
             });
-            self.authenticated_request(self.http.post(&events_url))
+            self.authenticated_request(self.http.post(events_url.as_str()))
                 .query(&[(
                     "on_conflict",
                     "user_id,strategy_instance_id,source_candle_open_time,event_type",
