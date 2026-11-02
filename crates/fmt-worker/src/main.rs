@@ -253,6 +253,7 @@ async fn backfill(
 
 #[tokio::main]
 async fn main() {
+    let _ = dotenvy::dotenv();
     tracing_subscriber::fmt()
         .with_env_filter(
             env::var("RUST_LOG").unwrap_or_else(|_| "fmt_worker=info".to_string()),
