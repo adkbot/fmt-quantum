@@ -81,6 +81,7 @@ impl SupabaseEventStore {
                     ("is_enabled", "eq.true"),
                     ("strategy_code", "eq.FMT_TOKYO_M15"),
                     ("source_symbol", "eq.BTCUSDT"),
+                    ("order", "id.asc"),
                     ("limit", "1000"),
                 ])
                 .header("Range", range)
