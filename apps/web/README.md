@@ -6,6 +6,7 @@ Initial Next.js dashboard shell for FMT QUANTUM.
 
 - Dark responsive trading-dashboard layout.
 - MetaMask/injected-wallet connection through wagmi.
+- EIP-191 ownership challenge signing on Arbitrum One; the backend verifies the recovered address and stores the association.
 - Supabase email magic-link sign-in.
 - API session verification against the Rust `/v1/me` endpoint.
 - Per-user risk configuration editor backed by `/v1/risk-config`.
