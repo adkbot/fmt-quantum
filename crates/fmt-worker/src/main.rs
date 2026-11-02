@@ -272,7 +272,12 @@ async fn backfill(
         if let Some(store) = store {
             persist_candles_with_retry(store, &candles_for_storage).await;
         }
-        persist_events(store, events).await;
+        if !events.is_empty() {
+            info!(
+                count = events.len(),
+                "Suppressing historical FMT events during REST backfill; only live WebSocket signals are persisted"
+            );
+        }
     }
     Ok(())
 }
