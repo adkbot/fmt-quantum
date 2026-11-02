@@ -1,5 +1,8 @@
 name: Project CI
 
+permissions:
+  contents: write
+
 concurrency:
   group: fmt-quantum-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -11,7 +14,39 @@ on:
     branches: [clone01]
 
 jobs:
+  lockfiles:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: clone01
+        with:
+          ref: clone01
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Generate reproducible lockfiles
+        run: |
+          cargo generate-lockfile
+          cd services/gmx-adapter
+          npm install --package-lock-only --ignore-scripts
+          cd ../../apps/web
+          npm install --package-lock-only --ignore-scripts
+      - name: Commit lockfiles when changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Cargo.lock services/gmx-adapter/package-lock.json apps/web/package-lock.json
+          if git diff --cached --quiet; then
+            echo "Lockfiles are already up to date."
+          else
+            git commit -m "chore(deps): commit reproducible lockfiles [skip ci]"
+            git push origin HEAD:clone01
+          fi
+
   rust:
+    needs: lockfiles
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -33,6 +68,7 @@ jobs:
           if-no-files-found: warn
 
   gmx-adapter:
+    needs: lockfiles
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -56,6 +92,7 @@ jobs:
           if-no-files-found: warn
 
   web:
+    needs: lockfiles
     runs-on: ubuntu-latest
     defaults:
       run:
