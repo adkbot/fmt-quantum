@@ -242,7 +242,7 @@ async fn main() {
                 let result = stream
                     .run_until_disconnect(|candle| {
                         if callback_error.is_some() {
-                            return;
+                            return Err("strategy handler already failed".into());
                         }
                         let candle_time = candle.open_time;
                         match engine.on_candle(candle) {
@@ -251,13 +251,17 @@ async fn main() {
                                 log_events(&events);
                                 for event in events {
                                     if callback_tx.send(event).is_err() {
-                                        callback_error = Some("event persistence queue closed".into());
-                                        break;
+                                        let error = "event persistence queue closed".to_string();
+                                        callback_error = Some(error.clone());
+                                        return Err(error);
                                     }
                                 }
+                                Ok(())
                             }
                             Err(error) => {
-                                callback_error = Some(error.to_string());
+                                let message = error.to_string();
+                                callback_error = Some(message.clone());
+                                Err(message)
                             }
                         }
                     })
