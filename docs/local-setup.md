@@ -83,7 +83,7 @@ In terminal 1:
 
 ```bash
 cd services/gmx-adapter
-npm install
+npm ci
 npm start
 ```
 
@@ -115,7 +115,7 @@ In terminal 4:
 
 ```bash
 cd apps/web
-npm install
+npm ci
 npm run dev
 ```
 
