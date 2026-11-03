@@ -25,7 +25,7 @@ services:
     plan: free
     dockerfilePath: ./Dockerfile.rust
     dockerContext: .
-    dockerCommand: fmt-api
+    dockerCommand: sh -c "fmt-worker & exec fmt-api"
     healthCheckPath: /health
     envVars:
       - key: API_BIND
