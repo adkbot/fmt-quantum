@@ -169,3 +169,15 @@ footer { display: flex; justify-content: space-between; gap: 16px; color: #66758
   .paper-panel { padding: 14px; }
   .paper-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+.auth-form.stacked { flex-direction: column; }
+.auth-form.stacked .button { width: 100%; }
+.auth-tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+.auth-tab { flex: 1; padding: 9px 10px; border: 1px solid var(--border); border-radius: 7px; color: #8fa3b2; background: #0b141d; font: 500 10px "DM Mono", monospace; letter-spacing: .08em; }
+.auth-tab.active { color: #071014; border-color: #4babbc; background: var(--cyan); }
+.auth-link { margin-top: 8px; padding: 0; border: 0; color: #8be1eb; background: none; font-size: 11px; text-decoration: underline; }
+
+.login-shell { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; gap: 24px; }
+.login-brand { justify-content: center; }
+.login-card { width: 100%; max-width: 420px; padding: 26px; }
+.login-card .auth-panel { margin-top: 12px; padding-top: 0; border-top: 0; }

@@ -5,6 +5,8 @@ import { supabase } from "@/lib/supabase";
 
 export function AuthPanel() {
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [mode, setMode] = useState<"login" | "signup" | "reset">("login");
   const [signedInEmail, setSignedInEmail] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -49,18 +51,61 @@ export function AuthPanel() {
     return () => data.subscription.unsubscribe();
   }, []);
 
-  async function sendMagicLink(event: FormEvent<HTMLFormElement>) {
+  async function submitAuth(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!supabase || !email.trim()) return;
 
     setBusy(true);
     setMessage("");
-    const { error } = await supabase.auth.signInWithOtp({
-      email: email.trim(),
-      options: { emailRedirectTo: window.location.origin }
-    });
+    const cleanEmail = email.trim();
+
+    if (mode === "signup") {
+      if (password.length < 8) {
+        setBusy(false);
+        setMessage("A senha precisa ter pelo menos 8 caracteres.");
+        return;
+      }
+      const { data, error } = await supabase.auth.signUp({
+        email: cleanEmail,
+        password,
+        options: { emailRedirectTo: window.location.origin }
+      });
+      setBusy(false);
+      if (error) {
+        setMessage(error.message);
+      } else if (data.session) {
+        setMessage("Conta criada. Você já está logado.");
+      } else {
+        setMessage("Conta criada. Confirme seu e-mail pelo link que enviamos e depois faça login.");
+        setMode("login");
+        setPassword("");
+      }
+      return;
+    }
+
+    if (mode === "reset") {
+      const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
+        redirectTo: window.location.origin
+      });
+      setBusy(false);
+      setMessage(error ? error.message : "Se o e-mail existir, enviamos o link para redefinir a senha.");
+      return;
+    }
+
+    const { error } = await supabase.auth.signInWithPassword({ email: cleanEmail, password });
     setBusy(false);
-    setMessage(error ? error.message : "Link de acesso enviado. Verifique seu e-mail.");
+    if (error) {
+      setMessage(
+        error.message.toLowerCase().includes("email not confirmed")
+          ? "Confirme seu e-mail pelo link que enviamos antes de entrar."
+          : error.message.toLowerCase().includes("invalid login")
+            ? "E-mail ou senha incorretos."
+            : error.message
+      );
+    } else {
+      setPassword("");
+      setMessage("");
+    }
   }
 
   async function signOut() {
@@ -84,10 +129,18 @@ export function AuthPanel() {
         </>
       ) : (
         <>
+          <div className="auth-tabs" role="tablist">
+            <button type="button" className={mode === "login" ? "auth-tab active" : "auth-tab"} onClick={() => { setMode("login"); setMessage(""); }}>ENTRAR</button>
+            <button type="button" className={mode === "signup" ? "auth-tab active" : "auth-tab"} onClick={() => { setMode("signup"); setMessage(""); }}>CRIAR CONTA</button>
+          </div>
           <p className="muted-copy">
-            Entre com seu e-mail. O Supabase enviará um link de acesso sem exigir senha.
+            {mode === "signup"
+              ? "Crie sua conta com e-mail e senha. Você receberá um e-mail para confirmar o cadastro."
+              : mode === "reset"
+                ? "Informe seu e-mail para receber o link de redefinição de senha."
+                : "Entre com seu e-mail e senha."}
           </p>
-          <form className="auth-form" onSubmit={sendMagicLink}>
+          <form className="auth-form stacked" onSubmit={submitAuth}>
             <input
               type="email"
               autoComplete="email"
@@ -97,10 +150,33 @@ export function AuthPanel() {
               required
               disabled={!supabase || busy}
             />
+            {mode !== "reset" ? (
+              <input
+                type="password"
+                autoComplete={mode === "signup" ? "new-password" : "current-password"}
+                placeholder="Senha (mín. 8 caracteres)"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                required
+                minLength={8}
+                disabled={!supabase || busy}
+              />
+            ) : null}
             <button className="button primary" type="submit" disabled={!supabase || busy}>
-              {busy ? "ENVIANDO..." : "ENVIAR LINK"}
+              {busy
+                ? "AGUARDE..."
+                : mode === "signup"
+                  ? "CRIAR CONTA"
+                  : mode === "reset"
+                    ? "ENVIAR LINK DE REDEFINIÇÃO"
+                    : "ENTRAR"}
             </button>
           </form>
+          {mode === "login" ? (
+            <button type="button" className="auth-link" onClick={() => { setMode("reset"); setMessage(""); }}>Esqueci minha senha</button>
+          ) : mode === "reset" ? (
+            <button type="button" className="auth-link" onClick={() => { setMode("login"); setMessage(""); }}>Voltar ao login</button>
+          ) : null}
           {!supabase ? (
             <p className="auth-warning">Configure NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY para habilitar o acesso.</p>
           ) : null}

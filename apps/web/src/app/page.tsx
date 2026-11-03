@@ -9,13 +9,14 @@ import { StrategyControlPanel } from "@/components/strategy-control-panel";
 import { StrategyEventsPanel } from "@/components/strategy-events-panel";
 import { PaperTradingPanel } from "@/components/paper-trading-panel";
 import { BtcMarketChart } from "@/components/btc-market-chart";
+import { AuthGate } from "@/components/auth-gate";
 
 function shortAddress(address?: string) {
   if (!address) return "";
   return `${address.slice(0, 6)}...${address.slice(-4)}`;
 }
 
-export default function HomePage() {
+function Dashboard() {
   const { address, chainId, isConnected, isConnecting, connect, disconnect, switchChain, error: walletError } = useWallet();
   const wrongNetwork = isConnected && chainId !== 42161;
 
@@ -139,5 +140,13 @@ export default function HomePage() {
         <span>AMBIENTE DE DESENVOLVIMENTO · EXECUÇÃO REAL DESABILITADA</span>
       </footer>
     </main>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <AuthGate>
+      <Dashboard />
+    </AuthGate>
   );
 }
