@@ -1,0 +1,65 @@
+# Render Blueprint para o backend do FMT Quantum (paper trading; execução desligada).
+# Segredos (sync: false) são preenchidos no painel do Render, nunca no repositório.
+# ATENÇÃO: o worker precisa ficar ligado 24h; instâncias free do Render hibernam por
+# inatividade, então o worker usa plano pago (starter). Confira o preço antes de aplicar.
+services:
+  - type: web
+    name: fmt-quantum-gmx-adapter
+    runtime: docker
+    plan: free
+    dockerfilePath: ./services/gmx-adapter/Dockerfile
+    dockerContext: ./services/gmx-adapter
+    envVars:
+      - key: GMX_ADAPTER_HOST
+        value: 0.0.0.0
+      - key: GMX_ADAPTER_PORT
+        value: "8090"
+      - key: PORT
+        value: "8090"
+      - key: GMX_ADAPTER_INTERNAL_KEY
+        sync: false
+
+  - type: web
+    name: fmt-quantum-api
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile.rust
+    dockerContext: .
+    dockerCommand: sh -c "fmt-worker & exec fmt-api"
+    healthCheckPath: /health
+    envVars:
+      - key: API_BIND
+        value: 0.0.0.0:8080
+      - key: PORT
+        value: "8080"
+      - key: EXECUTION_ENABLED
+        value: "false"
+      - key: SUPABASE_URL
+        value: https://xfnpmjpnymxraiuzojmx.supabase.co
+      - key: SUPABASE_ANON_KEY
+        value: sb_publishable_0TrFUr-E_OePR4YLmnKH5g_j2V1lzbu
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: CORS_ORIGIN
+        value: https://fmt-quantum-web-idbprdaniel-gmailcoms-projects.vercel.app
+      - key: GMX_ADAPTER_URL
+        sync: false
+      - key: GMX_ADAPTER_INTERNAL_KEY
+        sync: false
+
+  - type: worker
+    name: fmt-quantum-worker
+    runtime: docker
+    plan: starter
+    dockerfilePath: ./Dockerfile.rust
+    dockerContext: .
+    dockerCommand: fmt-worker
+    envVars:
+      - key: BYBIT_ENV
+        value: production
+      - key: EXECUTION_ENABLED
+        value: "false"
+      - key: SUPABASE_URL
+        value: https://xfnpmjpnymxraiuzojmx.supabase.co
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false

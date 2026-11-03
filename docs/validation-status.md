@@ -24,7 +24,7 @@ This file separates code that has been authored from code that has actually been
 - Docker Compose configuration, all three container image builds (Rust API/worker, GMX adapter, Next.js dashboard), and application of the Supabase migration against a temporary PostgreSQL 16 instance passed in GitHub Actions on prior commits.
 ## Remaining unverified
 
-- The Supabase migration has not been applied to a live Supabase project.
+- The Supabase migrations were applied to a live free-tier Supabase project (fmt-quantum, us-east-1) on 2026-11-03; the security advisor reported only the intentional `wallet_challenges` no-policy INFO (server-only table) after the `handle_new_user` EXECUTE revoke. End-to-end auth/Realtime flows are still unverified.
 - The Bybit feed has not been observed running against a configured environment.
 - The GMX SDK reads have not been verified against a connected Arbitrum wallet.
 - Daniel supplied the complete Pine Script v5 source; it is archived at `docs/reference/fmt-tokyo-original.pine`. The statement order has been reconciled in the Rust engine and spec; numeric candle-by-candle parity still requires TradingView-exported OHLCV reference data.
