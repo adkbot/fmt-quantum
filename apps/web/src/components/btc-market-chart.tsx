@@ -42,24 +42,12 @@ function newYorkTime(time: Time) {
 export function BtcMarketChart() {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const latestTimeRef = useRef<number | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
-  const [message, setMessage] = useState("Entre na conta para carregar o histórico M15.");
-
-  useEffect(() => {
-    if (!supabase) return;
-    void supabase.auth.getSession().then(({ data }) => {
-      setUserId(data.session?.user.id ?? null);
-    });
-    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUserId(session?.user.id ?? null);
-    });
-    return () => data.subscription.unsubscribe();
-  }, []);
+  const [message, setMessage] = useState("Carregando histórico M15…");
 
   useEffect(() => {
     const container = containerRef.current;
-    if (!supabase || !userId || !container) {
-      setMessage("Entre na conta para carregar o histórico M15.");
+    if (!supabase || !container) {
+      setMessage("Supabase não configurado: defina NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY.");
       return;
     }
 
@@ -192,7 +180,7 @@ export function BtcMarketChart() {
       observer.disconnect();
       chart.remove();
     };
-  }, [userId]);
+  }, []);
 
   return (
     <section className="market-chart panel">
