@@ -11,7 +11,7 @@ use tracing::{error, info, warn};
 
 const KLINE_LIMIT: u16 = 1000;
 const INITIAL_LOOKBACK_HOURS: i64 = 48;
-const DEFAULT_HISTORY_DAYS: i64 = 60;
+const DEFAULT_HISTORY_DAYS: i64 = 365;
 const MAX_HISTORY_DAYS: i64 = 400;
 
 #[derive(Clone)]
