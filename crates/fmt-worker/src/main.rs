@@ -11,6 +11,8 @@ use tracing::{error, info, warn};
 
 const KLINE_LIMIT: u16 = 1000;
 const INITIAL_LOOKBACK_HOURS: i64 = 48;
+const DEFAULT_HISTORY_DAYS: i64 = 60;
+const MAX_HISTORY_DAYS: i64 = 400;
 
 #[derive(Clone)]
 struct SupabaseEventStore {
@@ -460,6 +462,47 @@ async fn backfill(
     Ok(())
 }
 
+/// Loads closed M15 candles for the last `days` days into `market_candles`.
+/// Storage only: it never feeds the strategy engine or emits events, so it
+/// cannot create signals or paper positions. Failures are logged and ignored.
+async fn load_history(client: &BybitClient, store: &SupabaseEventStore, days: i64) {
+    if days <= 0 {
+        return;
+    }
+    let days = days.min(MAX_HISTORY_DAYS);
+    let step = Duration::minutes(15);
+    let now = Utc::now();
+    let floor_ts = now.timestamp() - now.timestamp().rem_euclid(15 * 60);
+    let latest_open = Utc
+        .timestamp_opt(floor_ts, 0)
+        .single()
+        .map(|t| t - step)
+        .unwrap_or(now);
+    let oldest_wanted = now - Duration::days(days);
+    let mut end = latest_open;
+    let mut total = 0_usize;
+    while end > oldest_wanted {
+        let start = std::cmp::max(end - step * (i32::from(KLINE_LIMIT) - 1), oldest_wanted);
+        match client.fetch_btcusdt_m15(start, end, KLINE_LIMIT).await {
+            Ok(candles) if candles.is_empty() => break,
+            Ok(candles) => {
+                if let Err(error) = store.persist_candles(&candles).await {
+                    warn!(%error, "History candle persistence failed; stopping history load");
+                    break;
+                }
+                total += candles.len();
+            }
+            Err(error) => {
+                warn!(%error, "Bybit history page failed; stopping history load");
+                break;
+            }
+        }
+        end = start - step;
+        sleep(StdDuration::from_millis(250)).await;
+    }
+    info!(candles = total, days, "Historical M15 candles stored for backtesting");
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -539,6 +582,14 @@ async fn main() {
     backfill(&client, &mut engine, &mut last_processed, store.as_ref(), true)
         .await
         .expect("initial FMT history warm-up failed");
+
+    if let Some(store) = store.as_ref() {
+        let history_days = env::var("HISTORY_DAYS")
+            .ok()
+            .and_then(|value| value.parse::<i64>().ok())
+            .unwrap_or(DEFAULT_HISTORY_DAYS);
+        load_history(&client, store, history_days).await;
+    }
 
     let mut backoff_seconds = 1_u64;
     loop {
