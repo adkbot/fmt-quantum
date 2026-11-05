@@ -198,7 +198,13 @@ fn event_parts(event: &StrategyEvent) -> (&'static str, &'static str, f64, DateT
 }
 
 async fn refresh_universe(db: &Db, client: &BybitClient, top_n: usize) -> Result<Vec<TickerSummary>, String> {
-    let ranked = client.fetch_top_usdt_perpetuals(top_n).await.map_err(|e| e.to_string())?;
+    let ranked: Vec<TickerSummary> = client
+        .fetch_top_usdt_perpetuals(top_n)
+        .await
+        .map_err(|e| e.to_string())?
+        .into_iter()
+        .filter(|t| t.symbol.len() <= 24 && t.symbol.chars().all(|c| c.is_ascii_uppercase() || c.is_ascii_digit()))
+        .collect();
     if ranked.is_empty() {
         return Err("Bybit returned an empty ticker ranking".into());
     }
