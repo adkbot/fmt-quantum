@@ -181,3 +181,9 @@ footer { display: flex; justify-content: space-between; gap: 16px; color: #66758
 .login-brand { justify-content: center; }
 .login-card { width: 100%; max-width: 420px; padding: 26px; }
 .login-card .auth-panel { margin-top: 12px; padding-top: 0; border-top: 0; }
+
+.symbol-select { padding: 4px 8px; border: 1px solid var(--border); border-radius: 6px; color: var(--text); background: #080e14; font: 600 inherit "DM Mono", monospace; cursor: pointer; }
+.symbol-select:focus { border-color: #4babbc; outline: none; }
+.scanner-controls { display: flex; flex-wrap: wrap; gap: 18px; margin: 4px 0 8px; }
+.scanner-toggle { display: flex; align-items: center; gap: 8px; color: var(--text); font-size: 12px; cursor: pointer; }
+.scanner-toggle input { accent-color: #4babbc; width: 15px; height: 15px; }

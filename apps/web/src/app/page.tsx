@@ -8,7 +8,9 @@ import { GmxAccountPanel } from "@/components/gmx-account-panel";
 import { StrategyControlPanel } from "@/components/strategy-control-panel";
 import { StrategyEventsPanel } from "@/components/strategy-events-panel";
 import { PaperTradingPanel } from "@/components/paper-trading-panel";
-import { BtcMarketChart } from "@/components/btc-market-chart";
+import { MarketChart } from "@/components/btc-market-chart";
+import { ScannerPanel } from "@/components/scanner-panel";
+import { ExecutionPanel } from "@/components/execution-panel";
 import { AuthGate } from "@/components/auth-gate";
 
 function shortAddress(address?: string) {
@@ -88,7 +90,7 @@ function Dashboard() {
         </article>
       </section>
 
-      <BtcMarketChart />
+      <MarketChart />
 
       <section className="content-grid">
         <article className="panel strategy-panel">
@@ -132,8 +134,10 @@ function Dashboard() {
       </section>
 
       <GmxAccountPanel />
+      <ScannerPanel />
       <StrategyEventsPanel />
       <PaperTradingPanel />
+      <ExecutionPanel />
 
       <footer>
         <span>FMT QUANTUM · BUILD 0.1.0</span>

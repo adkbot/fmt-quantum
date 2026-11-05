@@ -39,10 +39,25 @@ function newYorkTime(time: Time) {
   });
 }
 
-export function BtcMarketChart() {
+export function MarketChart() {
+  const [symbol, setSymbol] = useState("BTCUSDT");
+  const [symbols, setSymbols] = useState<string[]>(["BTCUSDT"]);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const latestTimeRef = useRef<number | null>(null);
   const [message, setMessage] = useState("Carregando histórico M15…");
+
+  useEffect(() => {
+    if (!supabase) return;
+    void supabase
+      .from("scanner_symbols")
+      .select("symbol")
+      .eq("is_active", true)
+      .order("rank", { ascending: true })
+      .then(({ data }) => {
+        const list = (data ?? []).map((row) => String(row.symbol));
+        setSymbols(Array.from(new Set(["BTCUSDT", ...list])));
+      });
+  }, []);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -90,14 +105,14 @@ export function BtcMarketChart() {
     const pending: CandleRow[] = [];
 
     const channel = client
-      .channel("bybit-btcusdt-m15-market-candles")
+      .channel(`bybit-${symbol}-m15-market-candles`)
       .on(
         "postgres_changes",
         {
           event: "*",
           schema: "public",
           table: "market_candles",
-          filter: "source_symbol=eq.BTCUSDT"
+          filter: `source_symbol=eq.${symbol}`
         },
         (payload) => {
           if (payload.eventType === "DELETE") return;
@@ -134,7 +149,7 @@ export function BtcMarketChart() {
         .select("id,open_time,open,high,low,close")
         .eq("source_venue", "BYBIT")
         .eq("source_category", "linear")
-        .eq("source_symbol", "BTCUSDT")
+        .eq("source_symbol", symbol)
         .eq("timeframe_minutes", 15)
         .order("open_time", { ascending: false })
         .limit(500);
@@ -180,14 +195,30 @@ export function BtcMarketChart() {
       observer.disconnect();
       chart.remove();
     };
-  }, []);
+  }, [symbol]);
 
   return (
     <section className="market-chart panel">
       <div className="panel-heading">
         <div>
           <div className="eyebrow">BYBIT · LINEAR PERPETUAL</div>
-          <h2>BTCUSDT · 15 minutos</h2>
+          <h2>
+            <select
+              className="symbol-select"
+              value={symbol}
+              onChange={(event) => {
+                latestTimeRef.current = null;
+                setMessage("Carregando histórico M15…");
+                setSymbol(event.target.value);
+              }}
+              aria-label="Ativo"
+            >
+              {symbols.map((item) => (
+                <option key={item} value={item}>{item}</option>
+              ))}
+            </select>{" "}
+            · 15 minutos
+          </h2>
         </div>
         <span className="tag">NEW YORK TIME</span>
       </div>
