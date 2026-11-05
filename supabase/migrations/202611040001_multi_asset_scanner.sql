@@ -9,7 +9,7 @@ alter table public.paper_positions add constraint paper_positions_entry_origin_c
 
 -- Universo de ativos varridos (atualizado pelo worker a partir dos tickers públicos da Bybit).
 create table if not exists public.scanner_symbols (
-  symbol text primary key check (symbol ~ '^[A-Z0-9]{3,20}USDT$'),
+  symbol text primary key check (symbol ~ '^[A-Z0-9]{1,20}USDT$'),
   turnover_24h numeric(30, 4) not null default 0,
   last_price numeric(30, 10),
   rank integer not null default 0,
