@@ -103,6 +103,23 @@ impl BybitClient {
         end: DateTime<Utc>,
         limit: u16,
     ) -> Result<Vec<Candle>, BybitError> {
+        self.fetch_m15("BTCUSDT", start, end, limit).await
+    }
+
+    /// Fetch M15 linear perpetual candles for any USDT symbol in [start, end].
+    pub async fn fetch_m15(
+        &self,
+        symbol: &str,
+        start: DateTime<Utc>,
+        end: DateTime<Utc>,
+        limit: u16,
+    ) -> Result<Vec<Candle>, BybitError> {
+        if !symbol.ends_with("USDT")
+            || symbol.len() > 24
+            || !symbol.chars().all(|c| c.is_ascii_uppercase() || c.is_ascii_digit())
+        {
+            return Err(BybitError::InvalidResponse("invalid symbol".into()));
+        }
         if start > end || !(1..=1000).contains(&limit) {
             return Err(BybitError::InvalidResponse("invalid time range or limit".into()));
         }
@@ -114,7 +131,7 @@ impl BybitClient {
             .get(self.endpoint("v5/market/kline")?)
             .query(&[
                 ("category", "linear"),
-                ("symbol", "BTCUSDT"),
+                ("symbol", symbol),
                 ("interval", "15"),
                 ("start", start_ms.as_str()),
                 ("end", end_ms.as_str()),
@@ -153,6 +170,58 @@ impl BybitClient {
         Ok(candles)
     }
 
+    /// Top-N tradable USDT linear perpetuals ranked by 24h turnover (public data).
+    pub async fn fetch_top_usdt_perpetuals(&self, top_n: usize) -> Result<Vec<TickerSummary>, BybitError> {
+        let instruments: ApiEnvelope<InstrumentResult> = self
+            .http
+            .get(self.endpoint("v5/market/instruments-info")?)
+            .query(&[("category", "linear"), ("limit", "1000")])
+            .send()
+            .await?
+            .error_for_status()?
+            .json()
+            .await?;
+        check_api(instruments.ret_code, instruments.ret_msg)?;
+        let tradable: std::collections::HashSet<String> = instruments
+            .result
+            .list
+            .into_iter()
+            .filter(|item| {
+                item.status == "Trading"
+                    && item.contract_type == "LinearPerpetual"
+                    && item.quote_coin == "USDT"
+                    && item.symbol.ends_with("USDT")
+            })
+            .map(|item| item.symbol)
+            .collect();
+
+        let tickers: ApiEnvelope<TickerResult> = self
+            .http
+            .get(self.endpoint("v5/market/tickers")?)
+            .query(&[("category", "linear")])
+            .send()
+            .await?
+            .error_for_status()?
+            .json()
+            .await?;
+        check_api(tickers.ret_code, tickers.ret_msg)?;
+        let mut ranked: Vec<TickerSummary> = tickers
+            .result
+            .list
+            .into_iter()
+            .filter(|item| tradable.contains(&item.symbol))
+            .filter_map(|item| {
+                let last_price = item.last_price.parse::<f64>().ok()?;
+                let turnover_24h = item.turnover_24h.parse::<f64>().ok()?;
+                (last_price.is_finite() && last_price > 0.0 && turnover_24h.is_finite())
+                    .then_some(TickerSummary { symbol: item.symbol, last_price, turnover_24h })
+            })
+            .collect();
+        ranked.sort_by(|a, b| b.turnover_24h.total_cmp(&a.turnover_24h));
+        ranked.truncate(top_n);
+        Ok(ranked)
+    }
+
     fn endpoint(&self, path: &str) -> Result<Url, BybitError> {
         self.base_url.join(path).map_err(|e| BybitError::InvalidResponse(e.to_string()))
     }
@@ -183,6 +252,30 @@ struct Instrument {
     status: String,
     #[serde(rename = "contractType")]
     contract_type: String,
+    #[serde(rename = "quoteCoin", default)]
+    quote_coin: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct TickerResult {
+    list: Vec<Ticker>,
+}
+
+#[derive(Debug, Deserialize)]
+struct Ticker {
+    symbol: String,
+    #[serde(rename = "lastPrice")]
+    last_price: String,
+    #[serde(rename = "turnover24h")]
+    turnover_24h: String,
+}
+
+/// One row of the public ticker ranking used by the multi-asset scanner.
+#[derive(Debug, Clone)]
+pub struct TickerSummary {
+    pub symbol: String,
+    pub last_price: f64,
+    pub turnover_24h: f64,
 }
 
 fn check_api(code: i64, message: String) -> Result<(), BybitError> {
@@ -230,6 +323,14 @@ mod tests {
         assert_eq!(candle.open, 95000.0);
         assert_eq!(candle.volume, 12.345);
         assert_eq!(candle.open_time.timestamp_millis(), 1768262400000);
+    }
+
+    #[test]
+    fn parses_ticker_payload_shape() {
+        let raw = serde_json::json!({"symbol":"ETHUSDT","lastPrice":"3200.5","turnover24h":"1500000000.25"});
+        let ticker: Ticker = serde_json::from_value(raw).unwrap();
+        assert_eq!(ticker.symbol, "ETHUSDT");
+        assert_eq!(ticker.turnover_24h.parse::<f64>().unwrap(), 1500000000.25);
     }
 
     #[test]

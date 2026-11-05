@@ -1,3 +1,6 @@
+mod executor;
+mod scanner;
+
 use bybit_feed::{BybitClient, BybitKlineStream, Environment};
 use chrono::{DateTime, Duration, NaiveDateTime, NaiveTime, TimeZone, Timelike, Utc};
 use chrono_tz::America::New_York;
@@ -142,6 +145,51 @@ impl SupabaseEventStore {
         Ok(())
     }
 
+
+    async fn user_max_open_positions(&self, user_id: &str) -> Result<Option<i64>, String> {
+        let url = format!("{}/rest/v1/risk_configs", self.base_url);
+        let rows = self
+            .authenticated_request(self.http.get(url.as_str()))
+            .query(&[
+                ("select", "max_open_positions"),
+                ("user_id", &format!("eq.{user_id}")),
+                ("limit", "1"),
+            ])
+            .send()
+            .await
+            .map_err(|error| error.to_string())?
+            .error_for_status()
+            .map_err(|error| error.to_string())?
+            .json::<Vec<Value>>()
+            .await
+            .map_err(|error| error.to_string())?;
+        Ok(rows
+            .first()
+            .and_then(|row| row.get("max_open_positions"))
+            .and_then(Value::as_i64))
+    }
+
+    async fn user_open_position_count(&self, user_id: &str) -> Result<i64, String> {
+        let url = format!("{}/rest/v1/paper_positions", self.base_url);
+        let rows = self
+            .authenticated_request(self.http.get(url.as_str()))
+            .query(&[
+                ("select", "id"),
+                ("user_id", &format!("eq.{user_id}")),
+                ("status", "eq.OPEN"),
+                ("limit", "1000"),
+            ])
+            .send()
+            .await
+            .map_err(|error| error.to_string())?
+            .error_for_status()
+            .map_err(|error| error.to_string())?
+            .json::<Vec<Value>>()
+            .await
+            .map_err(|error| error.to_string())?;
+        Ok(rows.len() as i64)
+    }
+
     async fn apply_paper_event(
         &self,
         strategy_id: &str,
@@ -176,6 +224,14 @@ impl SupabaseEventStore {
 
         if is_entry {
             if !open_positions.is_empty() {
+                return Ok(());
+            }
+
+            // Same rule as the multi-asset scanner: never exceed the user's own limits.
+            let max_positions = self.user_max_open_positions(user_id).await?;
+            let open_count = self.user_open_position_count(user_id).await?;
+            if let Err(reason) = scanner::entry_decision(true, max_positions, open_count, false) {
+                info!(user_id, reason, "Paper entry skipped by user limits");
                 return Ok(());
             }
 
@@ -589,6 +645,10 @@ async fn main() {
             .and_then(|value| value.parse::<i64>().ok())
             .unwrap_or(DEFAULT_HISTORY_DAYS);
         load_history(&client, store, history_days).await;
+    }
+
+    if env::var("SCANNER_ENABLED").map(|value| value != "false").unwrap_or(true) {
+        tokio::spawn(scanner::run(environment));
     }
 
     let mut backoff_seconds = 1_u64;
