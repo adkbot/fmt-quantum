@@ -647,6 +647,72 @@ pub async fn run(environment: Environment) {
     }
 }
 
+/// Research data: stores closed 1-minute candles (public Bybit data) for a few symbols so
+/// strategies can be backtested at M1 resolution. Incremental after the first load.
+pub async fn m1_research_loop(environment: Environment) {
+    let Some(db) = Db::from_env() else { return };
+    let Ok(client) = BybitClient::new(environment) else { return };
+    let days = env::var("M1_HISTORY_DAYS").ok().and_then(|v| v.parse::<i64>().ok()).unwrap_or(90).clamp(0, 180);
+    if days == 0 {
+        return;
+    }
+    let symbols: Vec<String> = env::var("M1_RESEARCH_SYMBOLS")
+        .unwrap_or_else(|_| "BTCUSDT,ETHUSDT,SOLUSDT".into())
+        .split(',')
+        .map(|s| s.trim().to_uppercase())
+        .filter(|s| !s.is_empty() && s.len() <= 24)
+        .collect();
+    loop {
+        for symbol in &symbols {
+            let latest = db
+                .get("research_candles_m1", &[("symbol", format!("eq.{symbol}")), ("select", "open_time".into()), ("order", "open_time.desc".into()), ("limit", "1".into())])
+                .await
+                .ok()
+                .and_then(|rows| rows.first().and_then(|r| str_field(r, "open_time").map(str::to_string)))
+                .and_then(|t| DateTime::parse_from_rfc3339(&t).ok())
+                .map(|t| t.with_timezone(&Utc));
+            let now = Utc::now();
+            let floor = now - Duration::seconds(now.timestamp() % 60);
+            let oldest = match latest {
+                Some(t) => t + Duration::minutes(1),
+                None => floor - Duration::days(days),
+            };
+            let mut end = floor - Duration::minutes(1);
+            let mut stored = 0_usize;
+            while end >= oldest {
+                let start = std::cmp::max(end - Duration::minutes(999), oldest);
+                match client.fetch_m1(symbol, start, end, 1000).await {
+                    Ok(candles) if candles.is_empty() => break,
+                    Ok(candles) => {
+                        let rows: Vec<Value> = candles
+                            .iter()
+                            .map(|c| json!({"symbol": symbol, "open_time": c.open_time.to_rfc3339(), "open": c.open, "high": c.high, "low": c.low, "close": c.close, "volume": c.volume}))
+                            .collect();
+                        if let Err(error) = db
+                            .post("research_candles_m1", &[("on_conflict", "symbol,open_time".into())], "resolution=merge-duplicates,return=minimal", &Value::Array(rows))
+                            .await
+                        {
+                            warn!(%symbol, %error, "M1 research storage failed");
+                            break;
+                        }
+                        stored += candles.len();
+                    }
+                    Err(error) => {
+                        warn!(%symbol, %error, "M1 research fetch failed");
+                        break;
+                    }
+                }
+                end = start - Duration::minutes(1);
+                sleep(StdDuration::from_millis(180)).await;
+            }
+            if stored > 0 {
+                info!(%symbol, stored, "M1 research candles stored");
+            }
+        }
+        sleep(StdDuration::from_secs(3600)).await;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

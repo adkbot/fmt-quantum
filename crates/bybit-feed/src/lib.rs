@@ -170,6 +170,60 @@ impl BybitClient {
         Ok(candles)
     }
 
+    /// Fetch closed 1-minute candles for research (public data). Unlike `fetch_m15` this does
+    /// not fail on gaps: illiquid minutes can be missing and the research code handles that.
+    pub async fn fetch_m1(
+        &self,
+        symbol: &str,
+        start: DateTime<Utc>,
+        end: DateTime<Utc>,
+        limit: u16,
+    ) -> Result<Vec<Candle>, BybitError> {
+        if !symbol.ends_with("USDT")
+            || symbol.len() > 24
+            || !symbol.chars().all(|c| c.is_ascii_uppercase() || c.is_ascii_digit())
+        {
+            return Err(BybitError::InvalidResponse("invalid symbol".into()));
+        }
+        if start > end || !(1..=1000).contains(&limit) {
+            return Err(BybitError::InvalidResponse("invalid time range or limit".into()));
+        }
+        let start_ms = start.timestamp_millis().to_string();
+        let end_ms = end.timestamp_millis().to_string();
+        let limit_s = limit.to_string();
+        let response: ApiEnvelope<KlineResult> = self
+            .http
+            .get(self.endpoint("v5/market/kline")?)
+            .query(&[
+                ("category", "linear"),
+                ("symbol", symbol),
+                ("interval", "1"),
+                ("start", start_ms.as_str()),
+                ("end", end_ms.as_str()),
+                ("limit", limit_s.as_str()),
+            ])
+            .send()
+            .await?
+            .error_for_status()?
+            .json()
+            .await?;
+        check_api(response.ret_code, response.ret_msg)?;
+        let mut candles = response
+            .result
+            .list
+            .into_iter()
+            .map(parse_kline)
+            .collect::<Result<Vec<_>, _>>()?;
+        candles.sort_by_key(|c| c.open_time);
+        candles.dedup_by_key(|c| c.open_time);
+        let now = Utc::now();
+        candles.retain(|c| c.open_time + Duration::minutes(1) <= now);
+        for candle in &candles {
+            candle.validate().map_err(|e| BybitError::InvalidResponse(e.to_string()))?;
+        }
+        Ok(candles)
+    }
+
     /// Top-N tradable USDT linear perpetuals ranked by 24h turnover (public data).
     pub async fn fetch_top_usdt_perpetuals(&self, top_n: usize) -> Result<Vec<TickerSummary>, BybitError> {
         let instruments: ApiEnvelope<InstrumentResult> = self

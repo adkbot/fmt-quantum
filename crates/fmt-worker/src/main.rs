@@ -649,6 +649,7 @@ async fn main() {
 
     if env::var("SCANNER_ENABLED").map(|value| value != "false").unwrap_or(true) {
         tokio::spawn(scanner::run(environment));
+        tokio::spawn(scanner::m1_research_loop(environment));
     }
 
     let mut backoff_seconds = 1_u64;
