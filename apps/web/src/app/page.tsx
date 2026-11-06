@@ -33,6 +33,7 @@ function Dashboard() {
           </div>
         </div>
         <div className="top-actions">
+          <a className="network-pill" href="/analise.html"><span className="dot" /> ANÁLISE &amp; BACKTEST</a>
           <span className="network-pill"><span className="dot amber" /> ARBITRUM ONE</span>
           {isConnected ? (
             <div className="wallet-actions">

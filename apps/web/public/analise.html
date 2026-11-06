@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="pt" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel FMT Quantum · Backtest e Análise Bybit (M15)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { darkMode: 'class', theme: { extend: { colors: {
+            darkBg: '#090d16', cardBg: '#111827', cardBorder: '#1f293d',
+            accentGreen: '#10b981', accentRed: '#f43f5e', accentBlue: '#3b82f6', accentYellow: '#f59e0b' } } } }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .font-mono-code { font-family: 'JetBrains Mono', monospace; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #090d16; }
+        ::-webkit-scrollbar-thumb { background: #1f293d; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #374151; }
+    </style>
+</head>
+<body class="bg-darkBg text-gray-100 min-h-screen flex flex-col selection:bg-blue-600 selection:text-white">
+
+    <header class="bg-cardBg/90 backdrop-blur border-b border-cardBorder px-4 sm:px-8 py-4 sticky top-0 z-50 shadow-xl">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center space-x-3.5">
+                <div class="bg-gradient-to-tr from-blue-600 to-indigo-500 p-2.5 rounded-xl shadow-lg text-white">
+                    <i class="fa-solid fa-microchip text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg sm:text-xl font-bold tracking-tight text-white flex items-center gap-2">
+                        FMT Quantum
+                        <span class="text-[10px] uppercase tracking-wider px-2 py-0.5 bg-emerald-500/10 text-emerald-400 rounded-md font-semibold border border-emerald-500/20 flex items-center gap-1.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Bybit API pública (M15 · tempo real)
+                        </span>
+                    </h1>
+                    <p class="text-xs text-gray-400">Backtest sobre dados reais · resolução vela a vela, sem olhar o futuro</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3 text-xs text-gray-400">
+                <a href="/" class="bg-gray-800/80 px-3 py-1.5 rounded-lg border border-gray-700/60 flex items-center gap-2 hover:bg-gray-700 transition">
+                    <i class="fa-solid fa-arrow-left text-blue-400"></i><span>Voltar ao painel de controle</span>
+                </a>
+                <span class="bg-gray-800/80 px-3 py-1.5 rounded-lg border border-gray-700/60 flex items-center gap-2">
+                    <i class="fa-solid fa-shield-halved text-blue-400"></i>
+                    <span>Filtro Anti-Choppy + VWAP + Faixa Initial Balance</span>
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 flex flex-col gap-6">
+
+        <section class="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 text-xs text-amber-200 leading-relaxed">
+            <i class="fa-solid fa-triangle-exclamation mr-1.5"></i>
+            <strong>Leia antes de operar dinheiro real.</strong> Um backtest descreve o passado e não garante resultado futuro. Esta versão corrige duas falhas da simulação anterior:
+            (1) o resultado era decidido na própria vela do sinal (olhava o futuro) e (2) operações sem resolução eram contadas como vitória. Aqui cada operação é resolvida nas velas <em>seguintes</em>,
+            com stop primeiro quando stop e alvo são tocados na mesma vela, e custos de taxa/derrapagem descontados. Em 1 ano de BTCUSDT, com essa regra, a taxa de acerto real ficou perto de 26% e o resultado líquido foi negativo.
+        </section>
+
+        <section class="bg-cardBg border border-cardBorder rounded-2xl p-5 shadow-xl flex flex-col gap-5">
+            <div class="flex flex-col md:flex-row items-start md:items-center justify-between border-b border-gray-800 pb-4 gap-3">
+                <div class="flex items-center gap-2 text-sm font-semibold text-gray-200">
+                    <i class="fa-solid fa-sliders text-blue-500"></i>
+                    <span>Parâmetros de Entrada e Gestão de Risco Fixo</span>
+                </div>
+                <div id="timeframeButtons" class="flex flex-wrap gap-1.5">
+                    <button onclick="mudarPeriodo(1)" data-days="1" class="time-btn px-3 py-1 rounded-lg text-xs font-medium bg-gray-800 hover:bg-gray-700 text-gray-300 transition">1 Dia</button>
+                    <button onclick="mudarPeriodo(2)" data-days="2" class="time-btn px-3 py-1 rounded-lg text-xs font-medium bg-gray-800 hover:bg-gray-700 text-gray-300 transition">2 Dias</button>
+                    <button onclick="mudarPeriodo(3)" data-days="3" class="time-btn px-3 py-1 rounded-lg text-xs font-medium bg-gray-800 hover:bg-gray-700 text-gray-300 transition">3 Dias</button>
+                    <button onclick="mudarPeriodo(5)" data-days="5" class="time-btn px-3 py-1 rounded-lg text-xs font-medium bg-gray-800 hover:bg-gray-700 text-gray-300 transition">5 Dias</button>
+                    <button onclick="mudarPeriodo(7)" data-days="7" class="time-btn px-3 py-1 rounded-lg text-xs font-semibold bg-blue-600 text-white transition shadow-sm">1 Semana</button>
+                    <button onclick="mudarPeriodo(30)" data-days="30" class="time-btn px-3 py-1 rounded-lg text-xs font-medium bg-gray-800 hover:bg-gray-700 text-gray-300 transition">1 Mês</button>
+                    <button onclick="mudarPeriodo(90)" data-days="90" class="time-btn px-3 py-1 rounded-lg text-xs font-medium bg-gray-800 hover:bg-gray-700 text-gray-300 transition">3 Meses</button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-gray-400 mb-1.5">Par de Negociação (Bybit · top por volume)</label>
+                    <div class="relative">
+                        <select id="symbolSelect" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-3.5 py-2.5 text-sm text-white font-semibold focus:outline-none focus:border-blue-500 cursor-pointer appearance-none">
+                            <option value="BTCUSDT" selected>BTCUSDT</option>
+                        </select>
+                        <i class="fa-solid fa-chevron-down absolute right-3.5 top-3.5 text-xs text-gray-400 pointer-events-none"></i>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-gray-400 mb-1.5 flex justify-between">
+                        <span>Risco por Operação ($)</span>
+                        <span class="text-[10px] text-blue-400 font-normal">Digite o valor exato</span>
+                    </label>
+                    <div class="relative">
+                        <span class="absolute left-3.5 top-2.5 text-gray-500 font-mono text-sm">$</span>
+                        <input type="number" id="riskInput" value="150" min="10" step="10" oninput="recalcularValoresNaTabela()" class="w-full bg-gray-900 border border-gray-700 rounded-xl pl-8 pr-3.5 py-2 text-sm text-white font-mono font-semibold focus:outline-none focus:border-blue-500" placeholder="Ex: 150">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-gray-400 mb-1.5 flex justify-between">
+                        <span>Custo ida e volta (bps)</span>
+                        <span class="text-[10px] text-blue-400 font-normal">taxas + derrapagem</span>
+                    </label>
+                    <input type="number" id="costInput" value="11" min="0" step="1" oninput="recalcularValoresNaTabela()" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-3.5 py-2 text-sm text-white font-mono font-semibold focus:outline-none focus:border-blue-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-gray-400 mb-1.5">Tolerância do filtro VWAP</label>
+                    <div class="relative">
+                        <select id="vwapPrecision" onchange="processarEExibirResultados(globalCandles)" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-3.5 py-2.5 text-sm text-white font-medium focus:outline-none focus:border-blue-500 cursor-pointer appearance-none">
+                            <option value="0.0002" selected>0,02% em torno da VWAP</option>
+                            <option value="0">Estrita (fechamento no lado certo)</option>
+                        </select>
+                        <i class="fa-solid fa-chevron-down absolute right-3.5 top-3.5 text-xs text-gray-400 pointer-events-none"></i>
+                    </div>
+                </div>
+
+                <div class="flex items-end">
+                    <button onclick="carregarDadosEExecutar()" id="btnAtualizar" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 active:scale-95 text-white font-semibold text-sm py-2.5 px-4 rounded-xl transition shadow-lg flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-play text-xs" id="spinnerIcon"></i>
+                        <span>Atualizar &amp; Recalcular</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-cardBg border border-cardBorder rounded-2xl p-5 shadow-lg flex flex-col justify-between relative overflow-hidden">
+                <div class="absolute -right-3 -bottom-3 text-emerald-500/10 text-6xl pointer-events-none"><i class="fa-solid fa-chart-line"></i></div>
+                <span class="text-xs font-semibold uppercase tracking-wider text-gray-400">Lucro / Prejuízo Líquido (após custos)</span>
+                <div class="mt-3">
+                    <h2 id="metricPnLUSD" class="text-2xl sm:text-3xl font-extrabold font-mono text-white">$ 0.00</h2>
+                    <span id="metricPnLPercent" class="text-xs font-medium text-emerald-400 mt-1 flex items-center gap-1">+0.00% capital inicial</span>
+                </div>
+            </div>
+            <div class="bg-cardBg border border-cardBorder rounded-2xl p-5 shadow-lg flex flex-col justify-between relative overflow-hidden">
+                <div class="absolute -right-3 -bottom-3 text-blue-500/10 text-6xl pointer-events-none"><i class="fa-solid fa-bullseye"></i></div>
+                <span class="text-xs font-semibold uppercase tracking-wider text-gray-400">Taxa de Acerto (Winrate)</span>
+                <div class="mt-3">
+                    <h2 id="metricWinrate" class="text-2xl sm:text-3xl font-extrabold font-mono text-white">0.0 %</h2>
+                    <span id="metricTradesCount" class="text-xs text-gray-400 mt-1 block">0 vitórias / 0 derrotas</span>
+                </div>
+            </div>
+            <div class="bg-cardBg border border-cardBorder rounded-2xl p-5 shadow-lg flex flex-col justify-between relative overflow-hidden">
+                <div class="absolute -right-3 -bottom-3 text-indigo-500/10 text-6xl pointer-events-none"><i class="fa-solid fa-scale-balanced"></i></div>
+                <span class="text-xs font-semibold uppercase tracking-wider text-gray-400">Fator de Lucro (PF) · Expectativa</span>
+                <div class="mt-3">
+                    <h2 id="metricProfitFactor" class="text-2xl sm:text-3xl font-extrabold font-mono text-white">0.00</h2>
+                    <span id="metricExpectancy" class="text-xs text-gray-400 mt-1 block">Alvo 3R · acerto de equilíbrio ≈ 25% + custos</span>
+                </div>
+            </div>
+            <div class="bg-cardBg border border-cardBorder rounded-2xl p-5 shadow-lg flex flex-col justify-between relative overflow-hidden">
+                <div class="absolute -right-3 -bottom-3 text-amber-500/10 text-6xl pointer-events-none"><i class="fa-solid fa-shield-virus"></i></div>
+                <span class="text-xs font-semibold uppercase tracking-wider text-gray-400">Falsos Sinais Bloqueados</span>
+                <div class="mt-3">
+                    <h2 id="metricBlockedCount" class="text-2xl sm:text-3xl font-extrabold font-mono text-amber-400">0</h2>
+                    <span class="text-xs text-gray-400 mt-1 block">Filtros Anti-Ruído ativados</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="bg-cardBg border border-cardBorder rounded-2xl p-5 shadow-xl flex flex-col gap-4">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-gray-800 pb-3">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-chart-area text-blue-500"></i>
+                    <h3 class="text-sm font-semibold text-gray-200">Evolução do Capital (Equity Curve - Risco Fixo, líquido de custos)</h3>
+                </div>
+                <span id="chartSubtitle" class="text-xs text-gray-400 font-mono">Banca de referência: $ 10,000.00</span>
+            </div>
+            <div class="relative w-full h-72 sm:h-80"><canvas id="equityChart"></canvas></div>
+        </section>
+
+        <section class="bg-cardBg border border-cardBorder rounded-2xl p-5 shadow-xl flex flex-col gap-4">
+            <div class="flex justify-between items-center border-b border-gray-800 pb-3">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-list-ul text-blue-500"></i>
+                    <h3 class="text-sm font-semibold text-gray-200">Registro Detalhado de Operações e Filtros de Segurança</h3>
+                </div>
+                <span id="tableCount" class="text-xs bg-gray-800 text-gray-300 px-2.5 py-1 rounded-lg border border-gray-700 font-mono">0 registros</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs">
+                    <thead class="bg-gray-900/90 text-gray-400 uppercase tracking-wider font-semibold border-b border-gray-800">
+                        <tr>
+                            <th class="py-3 px-4">#</th><th class="py-3 px-4">Data UTC</th><th class="py-3 px-4">Direção</th>
+                            <th class="py-3 px-4">Preço Entrada</th><th class="py-3 px-4">Stop / Alvo (3R)</th>
+                            <th class="py-3 px-4">Status / Decisão</th><th class="py-3 px-4">Filtro / Motivo</th>
+                            <th class="py-3 px-4 text-right">Resultado ($)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tradesTableBody" class="divide-y divide-gray-800/60 font-mono-code">
+                        <tr><td colspan="8" class="text-center py-10 text-gray-500">Carregando dados reais da Bybit...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-cardBg border-t border-cardBorder py-4 px-6 text-center text-xs text-gray-500 mt-auto">
+        FMT Quantum Analytics Engine • Dados reais da API v5 pública da Bybit • Atualiza a cada 60 s • <span id="lastUpdate">—</span>
+    </footer>
+
+<script>
+const BASE = 'https://api.bybit.com';
+const BANCA = 10000.0;
+const REFRESH_MS = 60000;
+let currentDays = 7, globalCandles = [], equityChartInstance = null, tradesSimulados = [], blockedGlobal = 0;
+
+function mudarPeriodo(dias) {
+    currentDays = dias;
+    document.querySelectorAll('.time-btn').forEach(btn => {
+        btn.className = parseInt(btn.getAttribute('data-days')) === dias
+            ? "time-btn px-3 py-1 rounded-lg text-xs font-semibold bg-blue-600 text-white transition shadow-sm"
+            : "time-btn px-3 py-1 rounded-lg text-xs font-medium bg-gray-800 hover:bg-gray-700 text-gray-300 transition";
+    });
+    carregarDadosEExecutar();
+}
+
+async function carregarSimbolos() {
+    try {
+        const [ins, tick] = await Promise.all([
+            fetch(`${BASE}/v5/market/instruments-info?category=linear&limit=1000`).then(r => r.json()),
+            fetch(`${BASE}/v5/market/tickers?category=linear`).then(r => r.json())
+        ]);
+        const ok = new Set(ins.result.list.filter(i => i.status === 'Trading' && i.contractType === 'LinearPerpetual' && i.quoteCoin === 'USDT').map(i => i.symbol));
+        const top = tick.result.list.filter(t => ok.has(t.symbol)).sort((a, b) => parseFloat(b.turnover24h) - parseFloat(a.turnover24h)).slice(0, 40);
+        const sel = document.getElementById('symbolSelect');
+        const atual = sel.value;
+        sel.innerHTML = top.map(t => `<option value="${t.symbol}">${t.symbol}</option>`).join('');
+        sel.value = top.some(t => t.symbol === atual) ? atual : 'BTCUSDT';
+    } catch (e) { console.warn('Lista de pares indisponível, usando BTCUSDT', e); }
+}
+
+async function buscarVelas(symbol, dias) {
+    const necessarias = dias * 96 + 8;
+    let end = Date.now(), todas = new Map();
+    for (let guarda = 0; guarda < 40 && todas.size < necessarias; guarda++) {
+        const r = await fetch(`${BASE}/v5/market/kline?category=linear&symbol=${symbol}&interval=15&limit=1000&end=${end}`);
+        const d = await r.json();
+        if (d.retCode !== 0 || !d.result || !d.result.list) throw new Error(d.retMsg || 'Falha na resposta da Bybit');
+        if (d.result.list.length === 0) break;
+        let maisAntigo = Infinity;
+        d.result.list.forEach(k => {
+            const t = parseInt(k[0]); maisAntigo = Math.min(maisAntigo, t);
+            todas.set(t, { time_ms: t, open: +k[1], high: +k[2], low: +k[3], close: +k[4], volume: +k[5], dt: new Date(t) });
+        });
+        end = maisAntigo - 1;
+    }
+    const agora = Date.now();
+    return [...todas.values()].sort((a, b) => a.time_ms - b.time_ms).filter(c => c.time_ms + 900000 <= agora);
+}
+
+async function carregarDadosEExecutar() {
+    const symbol = document.getElementById('symbolSelect').value;
+    const spinner = document.getElementById('spinnerIcon');
+    const btn = document.getElementById('btnAtualizar');
+    spinner.className = "fa-solid fa-spinner fa-spin text-xs"; btn.disabled = true;
+    document.getElementById('chartSubtitle').innerText = `Buscando velas de ${symbol}...`;
+    try {
+        globalCandles = await buscarVelas(symbol, currentDays + 1);
+        processarEExibirResultados(globalCandles);
+        document.getElementById('lastUpdate').innerText = 'atualizado ' + new Date().toLocaleTimeString();
+    } catch (error) {
+        console.error(error);
+        document.getElementById('chartSubtitle').innerText = 'Erro: ' + error.message;
+    } finally {
+        spinner.className = "fa-solid fa-play text-xs"; btn.disabled = false;
+    }
+}
+
+function fmtData(dt) { return dt.toISOString().replace('T', ' ').substring(0, 16) + ' UTC'; }
+
+function processarEExibirResultados(candles) {
+    if (!candles || candles.length === 0) return;
+    const tol = parseFloat(document.getElementById('vwapPrecision').value);
+    const limite = candles[candles.length - 1].time_ms - currentDays * 86400000;
+    const janela = candles.filter(c => c.time_ms >= limite);
+    tradesSimulados = []; blockedGlobal = 0;
+
+    const dias = {};
+    janela.forEach(c => { const k = c.dt.toISOString().slice(0, 10); (dias[k] = dias[k] || []).push(c); });
+
+    Object.keys(dias).sort().forEach(dia => {
+        const lista = dias[dia];
+        if (lista.length < 12 || lista[0].dt.getUTCHours() !== 0 || lista[0].dt.getUTCMinutes() !== 0) return; // dia incompleto no início da janela
+        const ib = lista.slice(0, 4);
+        const ibHigh = Math.max(...ib.map(c => c.high)), ibLow = Math.min(...ib.map(c => c.low)), ibMid = (ibHigh + ibLow) / 2;
+        let pv = 0, vol = 0, operou = false;
+        const vwaps = [], ranges = [];
+        lista.forEach((c, i) => { pv += (c.high + c.low + c.close) / 3 * c.volume; vol += c.volume; vwaps.push(vol > 0 ? pv / vol : c.close); ranges.push(c.high - c.low); });
+
+        for (let i = 4; i < lista.length && !operou; i++) {
+            const c = lista[i], vwap = vwaps[i];
+            const atr = (ranges[i] + ranges[i - 1] + ranges[i - 2] + ranges[i - 3]) / 4;
+            const choppy = atr < c.close * 0.0008;
+            let dir = null;
+            if (c.low <= ibMid && c.close > ibMid) dir = 'LONG';
+            else if (c.high >= ibMid && c.close < ibMid) dir = 'SHORT';
+            if (!dir) continue;
+
+            const entry = c.close;
+            const sl = dir === 'LONG' ? (ibLow < entry ? ibLow : entry * 0.994) : (ibHigh > entry ? ibHigh : entry * 1.006);
+            const dist = Math.abs(entry - sl);
+            const tp = dir === 'LONG' ? entry + dist * 3 : entry - dist * 3;
+            const base = { data: fmtData(c.dt), direcao: dir, entry, sl, tp, dtObj: c.dt, riskBps: dist / entry * 1e4 };
+            const viola = dir === 'LONG' ? c.close < vwap * (1 + tol) : c.close > vwap * (1 - tol);
+
+            if (choppy) { blockedGlobal++; tradesSimulados.push({ ...base, status: 'BLOQUEADO', motivo: 'Filtro Anti-Choppy (Ruído/Consolidação)', r: 0 }); continue; }
+            if (viola) { blockedGlobal++; tradesSimulados.push({ ...base, status: 'BLOQUEADO', motivo: 'Conflito com a VWAP', r: 0 }); continue; }
+
+            // Resolução vela a vela, SOMENTE nas velas seguintes; stop primeiro se ambos forem tocados na mesma vela
+            let r = null, status = null;
+            for (let j = i + 1; j < lista.length; j++) {
+                const k = lista[j];
+                const stopHit = dir === 'LONG' ? k.low <= sl : k.high >= sl;
+                const tpHit = dir === 'LONG' ? k.high >= tp : k.low <= tp;
+                if (stopHit) { r = -1; status = 'EXECUTADO (LOSS)'; break; }
+                if (tpHit) { r = 3; status = 'EXECUTADO (WIN)'; break; }
+            }
+            let motivo = r !== null ? 'Resolvido nas velas seguintes' : '';
+            if (r === null) {
+                const ultimo = lista[lista.length - 1].close;
+                r = (dir === 'LONG' ? ultimo - entry : entry - ultimo) / dist;
+                const diaAberto = dia === new Date().toISOString().slice(0, 10);
+                status = diaAberto ? 'EM ABERTO' : (r > 0 ? 'EXECUTADO (WIN)' : 'EXECUTADO (LOSS)');
+                motivo = diaAberto ? 'Posição ainda aberta (marcada a mercado)' : 'Sem stop/alvo: fechada ao fim do dia (UTC)';
+            }
+            tradesSimulados.push({ ...base, status, motivo, r });
+            operou = true;
+        }
+    });
+    recalculateMetricsAndRender();
+}
+
+function recalcularValoresNaTabela() { if (tradesSimulados.length) recalculateMetricsAndRender(); }
+
+function recalculateMetricsAndRender() {
+    const risco = parseFloat(document.getElementById('riskInput').value) || 150;
+    const custoBps = parseFloat(document.getElementById('costInput').value) || 0;
+    let banca = BANCA, vit = 0, der = 0, lucro = 0, prej = 0, somaR = 0, n = 0;
+    const curva = [{ x: tradesSimulados[0]?.dtObj || new Date(), y: banca }];
+
+    tradesSimulados.forEach(t => {
+        if (t.status === 'BLOQUEADO') { t.pnl = 0; return; }
+        const rLiq = t.r - custoBps / t.riskBps;   // custo expresso em R (taxas proporcionais ao nocional)
+        t.pnl = rLiq * risco; t.rLiq = rLiq; banca += t.pnl; somaR += rLiq; n++;
+        if (t.status === 'EM ABERTO') { curva.push({ x: t.dtObj, y: banca }); return; }
+        if (t.pnl > 0) { vit++; lucro += t.pnl; } else { der++; prej += Math.abs(t.pnl); }
+        curva.push({ x: t.dtObj, y: banca });
+    });
+
+    const total = vit + der, net = banca - BANCA;
+    document.getElementById('metricWinrate').innerText = (total ? (vit / total * 100).toFixed(1) : '0.0') + '%';
+    document.getElementById('metricTradesCount').innerText = `${vit} vitórias / ${der} derrotas`;
+    const pnlEl = document.getElementById('metricPnLUSD');
+    pnlEl.innerText = `${net >= 0 ? '+' : ''}$ ${net.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    pnlEl.className = `text-2xl sm:text-3xl font-extrabold font-mono ${net >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+    const pct = (net / BANCA * 100).toFixed(2), pctEl = document.getElementById('metricPnLPercent');
+    pctEl.innerText = `${pct >= 0 ? '+' : ''}${pct}% capital inicial`;
+    pctEl.className = `text-xs font-medium ${pct >= 0 ? 'text-emerald-400' : 'text-rose-400'} mt-1 flex items-center gap-1`;
+    document.getElementById('metricProfitFactor').innerText = prej > 0 ? (lucro / prej).toFixed(2) : (lucro > 0 ? '99.0' : '0.00');
+    document.getElementById('metricExpectancy').innerText = `Expectativa líquida: ${n ? (somaR / n).toFixed(2) : '0.00'} R por operação`;
+    document.getElementById('metricBlockedCount').innerText = blockedGlobal;
+    document.getElementById('tableCount').innerText = `${tradesSimulados.length} registros totais`;
+    document.getElementById('chartSubtitle').innerText = `Banca final: $ ${banca.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    renderizarTabelaTrades(); renderizarGraficoEquity(curva);
+}
+
+function renderizarTabelaTrades() {
+    const tbody = document.getElementById('tradesTableBody');
+    if (!tradesSimulados.length) { tbody.innerHTML = `<tr><td colspan="8" class="text-center py-10 text-gray-500">Nenhum sinal no período selecionado.</td></tr>`; return; }
+    tbody.innerHTML = tradesSimulados.map((r, i) => {
+        let badge = 'bg-gray-800 text-gray-400 border-gray-700';
+        if (r.status.includes('WIN')) badge = 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
+        else if (r.status.includes('LOSS')) badge = 'bg-rose-500/20 text-rose-400 border-rose-500/30';
+        else if (r.status.includes('BLOQUEADO') || r.status.includes('ABERTO')) badge = 'bg-amber-500/20 text-amber-400 border-amber-500/30';
+        return `<tr class="hover:bg-gray-800/40 transition border-b border-gray-800/40">
+            <td class="py-3 px-4 font-mono text-gray-400">#${i + 1}</td>
+            <td class="py-3 px-4 text-gray-300 font-sans">${r.data}</td>
+            <td class="py-3 px-4"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${r.direcao === 'LONG' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'}">${r.direcao}</span></td>
+            <td class="py-3 px-4 text-white font-mono">$ ${r.entry.toFixed(r.entry < 1 ? 5 : 2)}</td>
+            <td class="py-3 px-4 text-gray-400 text-[11px] font-mono"><span class="text-rose-400">SL: $ ${r.sl.toFixed(r.sl < 1 ? 5 : 2)}</span> | <span class="text-emerald-400">TP: $ ${r.tp.toFixed(r.tp < 1 ? 5 : 2)}</span></td>
+            <td class="py-3 px-4"><span class="px-2.5 py-1 rounded-full text-[10px] font-bold border ${badge}">${r.status}</span></td>
+            <td class="py-3 px-4 text-gray-400 text-[11px] font-sans">${r.motivo}</td>
+            <td class="py-3 px-4 text-right font-mono font-bold ${r.pnl > 0 ? 'text-emerald-400' : (r.pnl < 0 ? 'text-rose-400' : 'text-gray-500')}">${r.pnl > 0 ? '+' : ''}$ ${(r.pnl || 0).toFixed(2)}</td></tr>`;
+    }).join('');
+}
+
+function renderizarGraficoEquity(dados) {
+    const ctx = document.getElementById('equityChart').getContext('2d');
+    if (equityChartInstance) equityChartInstance.destroy();
+    equityChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: { labels: dados.map(e => e.x.toLocaleDateString() + ' ' + e.x.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })),
+            datasets: [{ label: 'Banca ($)', data: dados.map(e => e.y), borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.08)', borderWidth: 2.5, fill: true, tension: 0.2, pointRadius: 3.5, pointBackgroundColor: '#3b82f6' }] },
+        options: { responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false, backgroundColor: '#111827', titleColor: '#fff', bodyColor: '#3b82f6', borderColor: '#1f293d', borderWidth: 1 } },
+            scales: { x: { grid: { color: 'rgba(31, 41, 61, 0.4)' }, ticks: { color: '#9ca3af', font: { size: 10 }, maxTicksLimit: 8 } },
+                      y: { grid: { color: 'rgba(31, 41, 61, 0.6)' }, ticks: { color: '#9ca3af', font: { size: 10 } } } } }
+    });
+}
+
+document.getElementById('symbolSelect').addEventListener('change', carregarDadosEExecutar);
+window.onload = async function () {
+    await carregarSimbolos();
+    await carregarDadosEExecutar();
+    setInterval(carregarDadosEExecutar, REFRESH_MS);
+};
+</script>
+</body>
+</html>

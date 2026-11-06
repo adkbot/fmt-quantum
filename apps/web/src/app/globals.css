@@ -187,3 +187,4 @@ footer { display: flex; justify-content: space-between; gap: 16px; color: #66758
 .scanner-controls { display: flex; flex-wrap: wrap; gap: 18px; margin: 4px 0 8px; }
 .scanner-toggle { display: flex; align-items: center; gap: 8px; color: var(--text); font-size: 12px; cursor: pointer; }
 .scanner-toggle input { accent-color: #4babbc; width: 15px; height: 15px; }
+a.network-pill { text-decoration: none; }
