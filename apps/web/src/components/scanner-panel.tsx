@@ -10,6 +10,8 @@ type Opportunity = {
   side: "BUY" | "SELL";
   candle_time: string;
   reference_price: number | string;
+  strategy: "FMT_TOKYO_M15" | "DUAL_VWAP_SNIPER";
+  payload: { score?: number; stop?: number; target1?: number; target2?: number; rr_plan?: number; risk_bps?: number } | null;
 };
 
 type ScanSymbol = { symbol: string; turnover_24h: number | string; rank: number };
@@ -47,7 +49,7 @@ export function ScannerPanel() {
     async function load() {
       const [{ data: syms }, { data: ops, error }] = await Promise.all([
         client.from("scanner_symbols").select("symbol,turnover_24h,rank").eq("is_active", true).order("rank", { ascending: true }),
-        client.from("scanner_opportunities").select("id,symbol,event_type,side,candle_time,reference_price").order("candle_time", { ascending: false }).limit(40)
+        client.from("scanner_opportunities").select("id,symbol,event_type,side,candle_time,reference_price,strategy,payload").order("candle_time", { ascending: false }).limit(40)
       ]);
       if (cancelled) return;
       setSymbols((syms ?? []) as ScanSymbol[]);
@@ -128,18 +130,22 @@ export function ScannerPanel() {
       <div className="paper-table-wrap">
         <table className="paper-table">
           <thead>
-            <tr><th>Ativo</th><th>Tipo</th><th>Lado</th><th>Preço ref.</th><th>Vela (NY)</th></tr>
+            <tr><th>Ativo</th><th>Estratégia</th><th>Tipo</th><th>Lado</th><th>Preço ref.</th><th>Stop</th><th>Alvos</th><th>Nota</th><th>Vela (NY)</th></tr>
           </thead>
           <tbody>
             {items.length === 0 ? (
-              <tr><td colSpan={5}>Nenhuma oportunidade registrada ainda.</td></tr>
+              <tr><td colSpan={9}>Nenhuma oportunidade registrada ainda.</td></tr>
             ) : (
               items.map((o) => (
                 <tr key={o.id}>
                   <td>{o.symbol}</td>
+                  <td>{o.strategy === "DUAL_VWAP_SNIPER" ? "DUAL VWAP" : "FMT"}</td>
                   <td><span className={`paper-status ${o.event_type.startsWith("ENTER") ? "open" : "closed"}`}>{label(o.event_type)}</span></td>
                   <td className={o.side === "BUY" ? "positive" : "negative"}>{o.side === "BUY" ? "COMPRA" : "VENDA"}</td>
                   <td>{price(o.reference_price)}</td>
+                  <td>{o.payload?.stop !== undefined ? price(o.payload.stop) : "—"}</td>
+                  <td>{o.payload?.target1 !== undefined ? `${price(o.payload.target1)} / ${price(o.payload.target2 ?? o.payload.target1)}` : "—"}</td>
+                  <td>{o.payload?.score !== undefined ? `${o.payload.score.toFixed(0)}/100` : "—"}</td>
                   <td>{new Date(o.candle_time).toLocaleString("pt-BR", { timeZone: "America/New_York", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</td>
                 </tr>
               ))

@@ -11,6 +11,7 @@
 
 use crate::executor::{self, ExecConfig, ExecRequest};
 use bybit_feed::{BybitClient, Environment, TickerSummary};
+use dual_vwap::{SniperEngine, SniperOutcome, SniperParams, SniperSignal};
 use chrono::{DateTime, Duration, NaiveDateTime, NaiveTime, TimeZone, Timelike, Utc};
 use chrono_tz::America::New_York;
 use fmt_strategy::{Candle, FmtEngine, Side, StrategyEvent};
@@ -248,8 +249,10 @@ async fn store_candles(db: &Db, symbol: &str, candles: &[Candle]) -> Result<(), 
     .map(|_| ())
 }
 
-async fn scan_symbols(db: &Db, client: &BybitClient, universe: &[TickerSummary], stored: &mut HashMap<String, DateTime<Utc>>) -> Vec<Found> {
+async fn scan_symbols(db: &Db, client: &BybitClient, universe: &[TickerSummary], stored: &mut HashMap<String, DateTime<Utc>>) -> (Vec<Found>, Vec<(String, SniperSignal)>, usize) {
     let mut found = Vec::new();
+    let mut sniper: Vec<(String, SniperSignal)> = Vec::new();
+    let mut rejected = 0_usize;
     let now = Utc::now();
     for ticker in universe {
         let candles = match client.fetch_m15(&ticker.symbol, now - Duration::hours(WARMUP_HOURS), now, 200).await {
@@ -287,6 +290,22 @@ async fn scan_symbols(db: &Db, client: &BybitClient, universe: &[TickerSummary],
                 }
             }
         }
+        // Dual VWAP Sniper runs on the same closed candles (independent module, signals only).
+        let mut sniper_engine = SniperEngine::new(SniperParams::default());
+        for candle in &candles {
+            for outcome in sniper_engine.on_candle(*candle) {
+                if candle.open_time < last - Duration::minutes(15) {
+                    continue;
+                }
+                match outcome {
+                    SniperOutcome::Signal(signal) => sniper.push((ticker.symbol.clone(), signal)),
+                    SniperOutcome::Rejected { reason, .. } => {
+                        rejected += 1;
+                        debug!(symbol = %ticker.symbol, reason, "Sniper candidate rejected");
+                    }
+                }
+            }
+        }
         if failed {
             continue;
         }
@@ -299,7 +318,7 @@ async fn scan_symbols(db: &Db, client: &BybitClient, universe: &[TickerSummary],
         }
         sleep(StdDuration::from_millis(120)).await;
     }
-    found
+    (found, sniper, rejected)
 }
 
 async fn record_opportunities(db: &Db, found: &[Found]) {
@@ -320,13 +339,47 @@ async fn record_opportunities(db: &Db, found: &[Found]) {
     if let Err(error) = db
         .post(
             "scanner_opportunities",
-            &[("on_conflict", "symbol,event_type,candle_time".into())],
+            &[("on_conflict", "symbol,strategy,event_type,candle_time".into())],
             "resolution=ignore-duplicates,return=minimal",
             &Value::Array(rows),
         )
         .await
     {
         error!(%error, "Could not record scanner opportunities");
+    }
+}
+
+async fn record_sniper(db: &Db, signals: &[(String, SniperSignal)]) {
+    if signals.is_empty() {
+        return;
+    }
+    let rows: Vec<Value> = signals
+        .iter()
+        .map(|(symbol, s)| {
+            let buy = s.side == Side::Buy;
+            json!({
+                "symbol": symbol, "strategy": "DUAL_VWAP_SNIPER",
+                "event_type": if buy { "ENTER_BUY" } else { "ENTER_SELL" }, "side": side_str(s.side),
+                "candle_time": s.time.to_rfc3339(), "reference_price": s.entry,
+                "payload": {
+                    "origin": "SCANNER", "timeframe": "M15", "score": (s.score * 100.0).round() / 100.0,
+                    "stop": s.stop, "target1": s.target1, "target2": s.target2,
+                    "risk_bps": (s.risk_bps * 10.0).round() / 10.0, "rr_plan": (s.rr_plan * 100.0).round() / 100.0,
+                    "reasons": s.reasons, "execution_eligible": false
+                }
+            })
+        })
+        .collect();
+    if let Err(error) = db
+        .post(
+            "scanner_opportunities",
+            &[("on_conflict", "symbol,strategy,event_type,candle_time".into())],
+            "resolution=ignore-duplicates,return=minimal",
+            &Value::Array(rows),
+        )
+        .await
+    {
+        error!(%error, "Could not record Dual VWAP Sniper signals");
     }
 }
 
@@ -624,9 +677,10 @@ pub async fn run(environment: Environment) {
         }
 
         if !universe.is_empty() {
-            let found = scan_symbols(&db, &client, &universe, &mut stored).await;
-            info!(symbols = universe.len(), events = found.len(), "Scanner pass complete");
+            let (found, sniper, rejected) = scan_symbols(&db, &client, &universe, &mut stored).await;
+            info!(symbols = universe.len(), events = found.len(), sniper_signals = sniper.len(), sniper_rejected = rejected, "Scanner pass complete");
             record_opportunities(&db, &found).await;
+            record_sniper(&db, &sniper).await;
             if let Err(error) = deliver(&db, &found, exec_cfg.as_ref()).await {
                 error!(%error, "Scanner delivery failed");
             }

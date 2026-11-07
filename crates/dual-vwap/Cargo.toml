@@ -1,0 +1,11 @@
+[package]
+name = "dual-vwap"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+chrono = { version = "0.4", features = ["serde"] }
+fmt-strategy = { path = "../fmt-strategy" }
+serde = { version = "1", features = ["derive"] }

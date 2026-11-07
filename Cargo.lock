@@ -428,6 +428,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1aaf95b3e5c8f23aa320147307562d361db0ae0d51242340f558153b4eb2439b"
 
 [[package]]
+name = "dual-vwap"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "fmt-strategy",
+ "serde",
+]
+
+[[package]]
 name = "ecdsa"
 version = "0.16.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -631,6 +640,7 @@ dependencies = [
  "chrono",
  "chrono-tz",
  "dotenvy",
+ "dual-vwap",
  "fmt-strategy",
  "hex",
  "hmac",
