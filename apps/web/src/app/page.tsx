@@ -11,6 +11,7 @@ import { PaperTradingPanel } from "@/components/paper-trading-panel";
 import { MarketChart } from "@/components/btc-market-chart";
 import { ScannerPanel } from "@/components/scanner-panel";
 import { ExecutionPanel } from "@/components/execution-panel";
+import { AccountPanel } from "@/components/account-panel";
 import { AuthGate } from "@/components/auth-gate";
 
 function shortAddress(address?: string) {
@@ -138,6 +139,7 @@ function Dashboard() {
       <ScannerPanel />
       <StrategyEventsPanel />
       <PaperTradingPanel />
+      <AccountPanel />
       <ExecutionPanel />
 
       <footer>

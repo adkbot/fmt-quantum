@@ -38,3 +38,16 @@ This file separates code that has been authored from code that has actually been
 Do not deploy for real-money use or enable execution until the checks above are completed, failures are fixed, the strategy is proven equivalent to the agreed Pine behavior, GMX market/account reads are reconciled, paper trading is reviewed, and the delegated authorization design passes an independent security review.
 
 **Execution remains disabled.**
+
+
+## Atualização (nov/2026)
+
+- Scanner multiativos (30 pares, M15) em modo paper; entradas automáticas respeitam os limites do usuário.
+- Dual VWAP Sniper (módulo `dual-vwap`) gera sinais com nota 0–100; paridade com a referência SQL verificada em candles reais.
+- Executor Bybit (opt-in): testnet por padrão; produção exige `EXECUTION_MAINNET_CONFIRM=SIM_DINHEIRO_REAL`.
+  Toda ordem leva stop loss e take profit; exige margem isolada, limite de perda diária e de posições.
+  **Nunca foi exercitado contra a API da Bybit** (ambiente de desenvolvimento sem acesso) — validar na testnet.
+- Espelho da conta Bybit (somente leitura) alimenta o painel "Conta Bybit".
+- Resultados de pesquisa: ver `docs/research-findings.md` (nenhuma vantagem robusta após custos).
+- Release gate para conta real continua em aberto: expectativa positiva fora da amostra, custos medidos,
+  teste do executor na testnet e auditoria de segurança.

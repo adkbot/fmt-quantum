@@ -218,8 +218,13 @@ impl BybitClient {
         candles.dedup_by_key(|c| c.open_time);
         let now = Utc::now();
         candles.retain(|c| c.open_time + Duration::minutes(1) <= now);
-        for candle in &candles {
-            candle.validate().map_err(|e| BybitError::InvalidResponse(e.to_string()))?;
+        // The strategy engine's `validate()` only accepts 15-minute alignment, so M1 candles get a
+        // plain OHLCV sanity check here instead.
+        for c in &candles {
+            let finite = [c.open, c.high, c.low, c.close, c.volume].iter().all(|v| v.is_finite());
+            if !finite || c.volume < 0.0 || c.high < c.low || c.high < c.open.max(c.close) || c.low > c.open.min(c.close) {
+                return Err(BybitError::InvalidResponse("inconsistent M1 OHLCV values".into()));
+            }
         }
         Ok(candles)
     }

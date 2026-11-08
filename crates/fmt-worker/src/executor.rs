@@ -422,6 +422,91 @@ pub async fn try_execute(cfg: &ExecConfig, db: &Db, req: &ExecRequest) -> Result
     }
 }
 
+impl ExecConfig {
+    /// Read-only mirror of the operator's Bybit account (balance, positions, daily PnL).
+    /// Needs the API keys and the operator's user id; never places orders and ignores EXECUTION_ENABLED.
+    pub fn from_env_readonly() -> Option<Self> {
+        let api_key = env::var("BYBIT_API_KEY").ok()?;
+        let api_secret = env::var("BYBIT_API_SECRET").ok()?;
+        let user_id = env::var("EXECUTION_USER_ID").ok().filter(|v| v.len() == 36)?;
+        let production = env::var("EXECUTION_ENV").map(|v| v == "production").unwrap_or(false);
+        Some(Self {
+            api_key,
+            api_secret,
+            production,
+            user_id,
+            risk_usd: 0.0,
+            max_leverage: 1.0,
+            max_equity_risk_pct: 0.0,
+            max_daily_loss_usd: 0.0,
+            min_stop_bps: 0.0,
+            max_stop_bps: 0.0,
+        })
+    }
+}
+
+async fn snapshot(cfg: &ExecConfig) -> Result<Value, String> {
+    let api = Bybit::new(cfg)?;
+    let info = api.get("/v5/account/info", "").await?;
+    let wallet = api.get("/v5/account/wallet-balance", "accountType=UNIFIED").await?;
+    let account = wallet.get("list").and_then(|l| l.get(0)).cloned().unwrap_or(Value::Null);
+    let positions = api.get("/v5/position/list", "category=linear&settleCoin=USDT&limit=200").await?;
+    let day_start = Utc::now().with_hour(0).and_then(|t| t.with_minute(0)).and_then(|t| t.with_second(0)).unwrap_or_else(|| Utc::now() - Duration::hours(24));
+    let pnl = api.get("/v5/position/closed-pnl", &format!("category=linear&startTime={}&limit=100", day_start.timestamp_millis())).await?;
+    let daily: f64 = pnl.get("list").and_then(Value::as_array).map(|l| l.iter().filter_map(|x| f(x, "closedPnl")).sum()).unwrap_or(0.0);
+    let open: Vec<Value> = positions
+        .get("list")
+        .and_then(Value::as_array)
+        .map(|l| {
+            l.iter()
+                .filter(|p| f(p, "size").unwrap_or(0.0) > 0.0)
+                .map(|p| {
+                    json!({
+                        "symbol": p.get("symbol"), "side": p.get("side"), "size": f(p, "size"), "entry": f(p, "avgPrice"),
+                        "mark": f(p, "markPrice"), "unrealized": f(p, "unrealisedPnl"), "liq": f(p, "liqPrice"),
+                        "leverage": f(p, "leverage"), "stop_loss": f(p, "stopLoss"), "take_profit": f(p, "takeProfit")
+                    })
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    Ok(json!({
+        "environment": cfg.environment_name(),
+        "equity": f(&account, "totalEquity"),
+        "available": f(&account, "totalAvailableBalance"),
+        "unrealized_pnl": f(&account, "totalPerpUPL"),
+        "daily_realized_pnl": daily,
+        "margin_mode": info.get("marginMode"),
+        "positions": open,
+        "error": Value::Null,
+        "updated_at": Utc::now().to_rfc3339()
+    }))
+}
+
+/// Keeps `bybit_account_snapshots` fresh so the dashboard shows the REAL account (no simulation).
+pub async fn account_sync_loop(cfg: ExecConfig, db: Db) {
+    info!(environment = cfg.environment_name(), "Bybit account mirror started (read-only)");
+    loop {
+        let mut row = match snapshot(&cfg).await {
+            Ok(row) => row,
+            Err(error) => {
+                warn!(%error, "Bybit account snapshot failed");
+                json!({"environment": cfg.environment_name(), "error": error, "updated_at": Utc::now().to_rfc3339()})
+            }
+        };
+        if let Some(obj) = row.as_object_mut() {
+            obj.insert("user_id".into(), json!(cfg.user_id));
+        }
+        if let Err(error) = db
+            .post("bybit_account_snapshots", &[("on_conflict", "user_id".into())], "resolution=merge-duplicates,return=minimal", &row)
+            .await
+        {
+            warn!(%error, "Could not store the Bybit account snapshot");
+        }
+        tokio::time::sleep(StdDuration::from_secs(45)).await;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
