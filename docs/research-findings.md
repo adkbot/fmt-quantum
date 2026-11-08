@@ -19,3 +19,19 @@ A simulação antiga do painel (`analise.html` original) decidia o resultado na 
 
 Cuidados: amostras pequenas, uma única janela de mercado, muitas variações testadas (risco de ajuste ao passado).
 Antes de qualquer capital real: validação fora da amostra, mais ativos/períodos, custos reais medidos e paper trading.
+
+
+## Candles de 1 minuto (BTCUSDT, 90 dias: 10/ago a 08/nov/2026, 129.600 candles)
+
+| Estratégia (M1) | Operações | Acerto | Bruto (R/op.) | Líquido a 11 bps (R/op.) | Risco médio |
+|---|---|---|---|---|---|
+| Cruzamento da VWAP, entra na abertura seguinte, stop na VWAP, parcial 1R + trail (Tóquio) | 300 | 57% | +0,08 | −1,71 | 7 bps |
+| Idem, entra no fechamento do candle de confirmação | 507 | 54% | −0,01 | −1,64 | 8 bps |
+| Idem, stop de 2 ATR | 596 | 49% | +0,02 | −1,27 | 10 bps |
+| Idem, 24 h (VWAP do dia UTC) | 799 | 56% | −0,06 | −1,83 | 8 bps |
+| Dual VWAP Sniper, rápida 30 / nota ≥ 80 | 167 | 44% | +0,14 | −0,46 | 23 bps |
+| Dual VWAP Sniper, rápida 120 / nota ≥ 80 | 167 | 46% | +0,21 | −0,29 | 25 bps |
+
+No M1 o stop em bps é menor que o custo de ida e volta (7–10 bps contra 11 bps), então cada operação
+consome mais de 1 R só em taxas: nenhuma regra de entrada compensa isso. O Sniper tem bruto levemente
+positivo, mas o custo de equilíbrio é ≈ 5 bps (abaixo das taxas de mercado) e a amostra é pequena.
